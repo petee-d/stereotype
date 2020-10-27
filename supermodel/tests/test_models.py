@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+from typing import Set, cast
+from unittest import TestCase
+
+from supermodel import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
+    FloatField, StrField
+from supermodel.fields.base import Field
+from supermodel.tests.common import Leaf
+
+
+class DriedLeaf(Leaf):
+    age: float = FloatField(max_value=5, default=0.)
+
+
+class TestModels(TestCase):
+    def test_bad_init(self):
+        with self.assertRaises(ConversionError) as ctx:
+            DriedLeaf(cast(dict, 'bad'))
+        self.assertEqual('Supplied type str, needs a mapping', str(ctx.exception))
+        self.assertEqual({'_global': ['Supplied type str, needs a mapping']}, ctx.exception.errors)
+
+    def test_initialized_baseclass(self):
+        Leaf()  # Ensures it is pre-initialized
+        model = DriedLeaf({'color': 'brown'})
+        self.assertEqual('brown', model.color)
+        self.assertEqual(0, model.age)
+        model.validate()
+        self.assertEqual({'color': 'brown', 'age': 0}, model.serialize())
+
+    def test_non_initialized_baseclass(self):
+        class MyBase(Model):
+            a: int
+            b: float
+            c: int = IntField(hide_none=True, default=-5)
+
+        class MyChild(MyBase):
+            b: str = StrField(primitive_name='bb')
+            d: bool = True
+
+            def validate_a(self, value, _):
+                if value <= 0:
+                    raise ValueError('Must be positive')
+
+            def validate_b(self, value, _):
+                if not value:
+                    raise ValueError('Must be truthy')
+
+            def validate_c(self, value, _):
+                if value >= 0:
+                    raise ValueError('Must be negative')
+
+        model = MyChild({'a': 1, 'b': 'ignored', 'bb': 'abc'})
+        self.assertEqual(1, model.a)
+        self.assertEqual('abc', model.b)
+        self.assertEqual(-5, model.c)
+        self.assertIs(True, model.d)
+        model.validate()
+        self.assertEqual({'a': 1, 'bb': 'abc', 'c': -5, 'd': True}, model.serialize())
+        model.a = 0
+        model.b = ''
+        model.c = 4
+        with self.assertRaises(ValidationError) as ctx:
+            model.validate()
+        self.assertEqual({'a': ['Must be positive'], 'bb': ['Must be truthy'], 'c': ['Must be negative']},
+                         ctx.exception.errors)
+
+        # If fields in bases were not copied, b would inherit the validator
+        base = MyBase({'a': 0, 'b': 0, 'c': 1})
+        self.assertEqual(0, base.a)
+        self.assertEqual(0, base.b)
+        self.assertEqual(1, base.c)
+        base.validate()
+        self.assertEqual({'a': 0, 'b': 0, 'c': 1}, base.serialize())
+
+    def test_bad_field_type(self):
+        class BadType(Model):
+            set: Set[int]
+        with self.assertRaises(ConfigurationError) as ctx:
+            BadType()
+        self.assertEqual('Unsupported Model field typing.Set[int]', str(ctx.exception))
+
+    def test_multiple_non_abstract_bases(self):
+        class Base1(Model):
+            a: int
+
+        class Base2(Model):
+            b: int
+
+        with self.assertRaises(ConfigurationError) as ctx:
+            class Parent(Base1, Base2):
+                unused: Parent
+        self.assertEqual('Parent: multiple bases have instance lay-out conflict, if inheriting from multiple models, '
+                         'only one may have __slots__ (declare abstract models without __slots__ by adding class '
+                         'attribute `__abstract__ = True`)', str(ctx.exception))
+
+    def test_none_primitive_name(self):
+        class NonePrimitive(Model):
+            normal: bool = BoolField(primitive_name='ok', to_primitive_name='ordinary')
+            none_both: int = IntField(primitive_name=None)
+            none_input: float = FloatField(primitive_name=None, to_primitive_name='no_input')
+            none_output: str = StrField(to_primitive_name=None)
+
+        model = NonePrimitive({'ok': True, 'none_both': 1, 'none_input': 4.2, 'no_input': 4.7, 'none_output': 'data'})
+        self.assertIs(True, model.normal)
+        self.assertIs(Missing, model.none_both)
+        self.assertIs(Missing, model.none_input)
+        self.assertEqual('data', model.none_output)
+        self.assertEqual({'ordinary': True}, model.serialize())
+
+        model.none_both = 5
+        model.none_input = 42.47
+        model.none_output = 'changed'
+        self.assertEqual({'ordinary': True, 'no_input': 42.47}, model.serialize())
+        self.assertEqual(5, model.none_both)
+        self.assertEqual('changed', model.none_output)
+
+    def test_equality(self):
+        model = DriedLeaf({'age': 4.2})
+        self.assertEqual(DriedLeaf({'color': 'green', 'age': 4.2}), model)
+        self.assertNotEqual(DriedLeaf({'color': 'green', 'age': 4.7}), model)
+        self.assertNotEqual(DriedLeaf({'color': None, 'age': 4.2}), model)
+        self.assertNotEqual(Leaf({'color': 'green', 'age': 4.2}), model)
+        self.assertNotEqual(1, model)
+        self.assertNotEqual(None, model)
+
+    def test_missing_coverage(self):
+        # The only meaning of this test is to ensure 100% coverage for dead code
+        self.assertEqual(1, IntField().to_primitive(1))
+
+        class Temp(Model):
+            field: int
+        Temp()
+
+        class FakeField(Field):
+            atomic = False
+            type = set
+        fake_field = FakeField()
+        fake_field.name = 'field'
+        Temp.__fields__[0] = fake_field
+
+        with self.assertRaises(NotImplementedError):
+            repr(Temp())

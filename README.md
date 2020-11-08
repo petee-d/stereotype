@@ -17,6 +17,7 @@ has 100% line test coverage.
 - Fields with `List`s of any supported type and `Dict`s of atomic types to any supported type
 - Support for `Model` subclass fields, including recursive definitions
 - Dynamic model fields resolved using a string `type` key
+- Free-form fields using `Any`
 - Optional field defaults using atomic values or callables
 - Renaming or disabling fields for purposes of input/output/both
 - Optional hiding of `None` values from output

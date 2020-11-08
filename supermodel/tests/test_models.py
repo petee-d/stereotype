@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Set, cast
+from typing import Set, cast, Any, Optional
 from unittest import TestCase
 
 from supermodel import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
     FloatField, StrField
-from supermodel.fields.base import Field
+from supermodel.fields.base import Field, AnyField
 from supermodel.tests.common import Leaf
 
 
@@ -123,6 +123,47 @@ class TestModels(TestCase):
         self.assertNotEqual(Leaf({'color': 'green', 'age': 4.2}), model)
         self.assertNotEqual(1, model)
         self.assertNotEqual(None, model)
+
+    def test_any_field(self):
+        class WithAny(Model):
+            normal: Any
+            optional: Optional[Any] = None
+            custom: Optional[Any] = AnyField(deep_copy=True, default='x', hide_none=True, primitive_name='customized')
+
+            def validate_optional(self, value, _):
+                if value:
+                    raise ValueError('Must be falsy')
+
+        initial = {'normal': {'x': 1}, 'customized': [1, [], {}]}
+        model = WithAny(initial)
+        self.assertEqual({'x': 1}, model.normal)
+        self.assertIsNone(model.optional)
+        self.assertEqual([1, [], {}], model.custom)
+        initial['customized'][1].append(2)
+        initial['customized'].pop(-1)
+        model.validate()
+        self.assertEqual({'normal': {'x': 1}, 'optional': None, 'customized': [1, [], {}]}, model.serialize())
+
+        model.normal['x'] = 'no copy'
+        self.assertEqual({'normal': {'x': 'no copy'}, 'optional': None, 'customized': [1, [], {}]}, model.serialize())
+        model.serialize()['customized'][1].append(3)
+        self.assertEqual([1, [], {}], model.custom)
+
+        model = WithAny({'optional': 123})
+        self.assertEqual({'optional': 123, 'customized': 'x'}, model.serialize())
+        with self.assertRaises(ValidationError) as e:
+            model.validate()
+        self.assertEqual({
+            'normal': ['This field is required'],
+            'optional': ['Must be falsy'],
+        }, e.exception.errors)
+
+    def test_any_field_configuration_error(self):
+        class Bad(Model):
+            bad: Any = None
+        with self.assertRaises(ConfigurationError) as e:
+            Bad()
+        self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))
 
     def test_missing_coverage(self):
         # The only meaning of this test is to ensure 100% coverage for dead code

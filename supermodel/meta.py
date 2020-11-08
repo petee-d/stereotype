@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Union, Set, Type, TYPE_CHECKING
 
-from supermodel.fields.base import Field
+from supermodel.fields.base import Field, AnyField
 from supermodel.fields.compound import ListField, DictField
 from supermodel.roles import Role, RequestedRoleFields, FinalizedRoleFields
 from supermodel.utils import ConfigurationError
@@ -110,12 +110,14 @@ class ModelMeta(type):
 
         typing_repr = repr(annotation)
         if typing_repr.startswith('typing.'):
-            if typing_repr.startswith('typing.List'):
+            if typing_repr.startswith('typing.List['):
                 return mcs._analyze_annotation_list(annotation)
-            if typing_repr.startswith('typing.Dict'):
+            if typing_repr.startswith('typing.Dict['):
                 return mcs._analyze_annotation_dict(annotation)
-            if typing_repr.startswith('typing.Union'):
+            if typing_repr.startswith('typing.Union['):
                 return mcs._analyze_annotation_union(annotation)
+            if typing_repr == 'typing.Any':
+                return AnyField()
         else:
             if annotation in (bool, int, float, str):
                 return mcs._analyze_annotation_atomic(annotation)

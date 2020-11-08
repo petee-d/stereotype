@@ -264,6 +264,6 @@ class TestStrField(TestCase):
     def test_bad_validation_combo(self):
         with self.assertRaises(ConfigurationError) as ctx:
             class LengthChoices(Model):
-                bad: str = StrField(min_length=1, choices=('x', 'y', 'zz'))
                 unused: LengthChoices
+                bad: str = StrField(min_length=1, choices=('x', 'y', 'zz'))
         self.assertEqual('Cannot use min_length or max_length together with choices', str(ctx.exception))

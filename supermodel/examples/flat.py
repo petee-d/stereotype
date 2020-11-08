@@ -2,6 +2,8 @@ from typing import Optional
 
 from supermodel import Model, FloatField
 
+# Keep this file synchronized with the `README.md` documentation!
+
 
 class Employee(Model):
     name: str
@@ -33,7 +35,7 @@ from supermodel import ValidationError, Missing  # noqa
 model = Employee({'department': None, 'salary': '10'})
 try:
     model.validate()
-    assert False, 'Validation fails due to errors below'
+    assert False, 'Validation fails due to errors below'  # pragma: no cover
 except ValidationError as e:
     assert str(e) == 'name: This field is required'
     assert e.errors == {

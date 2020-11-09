@@ -115,6 +115,7 @@ class TestDynamicModelField(TestCase):
     def test_bad_configuration_non_model(self):
         class Bad(Model):
             field: Union[Leaf, Fake]
+
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Union Model fields can only be Optional or Union of Model subclass types, '
@@ -123,6 +124,7 @@ class TestDynamicModelField(TestCase):
     def test_bad_configuration_no_type(self):
         class Worse(Model):
             field: Union[Leaf, Trunk, None]
+
         with self.assertRaises(ConfigurationError) as ctx:
             Worse()
         self.assertEqual('Model Trunk used in a dynamic model field '

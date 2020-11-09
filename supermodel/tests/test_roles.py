@@ -35,6 +35,7 @@ class TestModels(TestCase):
     def test_role_inheritance_simple(self):
         class MyChildRoles(MyRoles):
             pass
+
         model = MyChildRoles({'c1': 1})
         self._assert_my_roles(model)
 

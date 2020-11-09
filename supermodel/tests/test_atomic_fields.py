@@ -83,6 +83,7 @@ class TestBooleanField(TestCase):
     def test_bad_default(self):
         class NotBool(Model):
             value: bool = 42
+
         with self.assertRaises(ConfigurationError) as ctx:
             NotBool()
         self.assertEqual('Value `42` used as field default must be of type bool', str(ctx.exception))
@@ -140,12 +141,14 @@ class TestIntField(TestCase):
     def test_bad_default(self):
         class NotInt(Model):
             field: int = 4.2
+
         with self.assertRaises(ConfigurationError) as ctx:
             NotInt()
         self.assertEqual('Value `4.2` used as field default must be of type int', str(ctx.exception))
 
         class NotOptional(Model):
             field: int = None
+
         with self.assertRaises(ConfigurationError) as ctx:
             NotOptional()
         self.assertEqual('Field `field` is not Optional and cannot use None as default', str(ctx.exception))
@@ -222,6 +225,7 @@ class TestFloatField(TestCase):
     def test_mismatched_field(self):
         class Mismatch(Model):
             my_name: int = FloatField(min_value=1)
+
         with self.assertRaises(ConfigurationError) as ctx:
             Mismatch({'my_name': 5})
         self.assertEqual('Annotations for <Field my_name of type int, required> require custom field type IntField, '

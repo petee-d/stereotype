@@ -267,6 +267,7 @@ class TestDictType(TestCase):
     def test_configuration_error(self):
         class BadKey(Model):
             bad: Dict[MyStrModel, bool]
+
         with self.assertRaises(ConfigurationError) as ctx:
             BadKey()
         self.assertEqual('DictField keys may only be booleans, numbers or strings: '
@@ -274,6 +275,7 @@ class TestDictType(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             class BadField(Model):
                 bad: Dict[MyStrModel, bool] = DictField(ModelField())
+
             BadField()
         self.assertEqual('DictField keys may only be booleans, numbers or strings: '
                          'typing.Dict[test_compound_fields.MyStrModel, bool]', str(ctx.exception))

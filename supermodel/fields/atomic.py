@@ -103,8 +103,7 @@ class StrField(Field):
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
-                 min_length: int = 0, max_length: Optional[int] = None,
-                 choices: Optional[Iterable[str]] = None):
+                 min_length: int = 0, max_length: Optional[int] = None, choices: Optional[Iterable[str]] = None):
         super().__init__(default=default, hide_none=hide_none,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         if (min_length > 0 or max_length is not None) and choices is not None:

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional, Union, List, Dict, cast
+from typing import Optional, Union, List, Dict, cast, Iterable
 from unittest import TestCase
 
 from supermodel import Model, Missing, ValidationError, ConversionError, ModelField, ConfigurationError, ListField, \
     StrField, BoolField
 from supermodel.fields.compound import DictField
+from supermodel.roles import RequestedRoleFields, Role
 
 
 class MyBoolModel(Model):
@@ -126,6 +127,25 @@ class TestListType(TestCase):
         }, ctx.exception.errors)
         Sizes({'min': ['4'], 'max': None, 'exact': ['a', 'b', 'c'], 'min_max': [{}, {}]}).validate()
         Sizes({'min': ['4', 2], 'max': {'4.2', 0}, 'exact': ['a', 'a', 'a'], 'min_max': [{}, {}, {}]}).validate()
+
+    def test_field_options(self):
+        my_role = Role('my-role')
+
+        class Stuff(Model):
+            hide_none: Optional[List[str]] = ListField(hide_none=True)
+            custom_output: List[MyStrModel] = ListField(to_primitive_name='custom')
+            no_output: List[int] = ListField(primitive_name='input', to_primitive_name=None)
+
+            @classmethod
+            def declare_roles(cls) -> Iterable[RequestedRoleFields]:
+                yield my_role.blacklist(cls.custom_output)
+
+        model = Stuff({'hide_none': ['ok'], 'custom': ['nope'], 'custom_output': [{}], 'input': [1, 2]})
+        self.assertEqual({'hide_none': ['ok'], 'custom': [{'field': ''}]}, model.to_primitive())
+
+        model = Stuff({'hide_none': None, 'custom_output': [{'field': 'abc'}]})
+        self.assertEqual({}, model.to_primitive(my_role))
+        self.assertEqual({'custom': [{'field': 'abc'}]}, model.to_primitive())
 
 
 class MyDicts(Model):

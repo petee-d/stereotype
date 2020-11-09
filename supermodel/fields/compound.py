@@ -11,7 +11,8 @@ class _CompoundField(Field):
     def __init__(self, *, default: Any = Missing, hide_none: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None):
-        super().__init__(default=default, primitive_name=primitive_name)
+        super().__init__(default=default, hide_none=hide_none,
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.min_length = min_length
         self.max_length = max_length
 

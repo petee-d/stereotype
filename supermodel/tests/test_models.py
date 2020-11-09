@@ -76,6 +76,7 @@ class TestModels(TestCase):
     def test_bad_field_type(self):
         class BadType(Model):
             set: Set[int]
+
         with self.assertRaises(ConfigurationError) as ctx:
             BadType()
         self.assertEqual('Unsupported Model field typing.Set[int]', str(ctx.exception))
@@ -161,6 +162,7 @@ class TestModels(TestCase):
     def test_any_field_configuration_error(self):
         class Bad(Model):
             bad: Any = None
+
         with self.assertRaises(ConfigurationError) as e:
             Bad()
         self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))
@@ -171,14 +173,16 @@ class TestModels(TestCase):
 
         class Temp(Model):
             field: int
+
         Temp()
 
         class FakeField(Field):
             atomic = False
             type = set
+
         fake_field = FakeField()
         fake_field.name = 'field'
-        Temp.__fields__[0] = fake_field
+        Temp.__input_fields__[0] = fake_field
 
         with self.assertRaises(NotImplementedError):
             repr(Temp())

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from threading import Lock
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Any, Tuple
 
 from supermodel.utils import ConfigurationError
 
@@ -59,11 +59,22 @@ class RequestedRoleFields:
     __slots__ = ('role', 'fields', 'is_whitelist', 'override_parents')
 
     def __init__(self, role: Role, fields, is_whitelist: bool, override_parents: bool):
-        non_descriptors = [field for field in fields if type(field).__name__ != 'member_descriptor']
+        self.fields, non_descriptors = self._collect_input_fields(fields)
         if non_descriptors:
             raise ConfigurationError(f'Role blacklist/whitelist needs member descriptors (e.g. cls.my_field), '
                                      f'got {non_descriptors[0]!r}')
         self.role = role
-        self.fields: Set[str] = {field.__name__ for field in fields}
         self.is_whitelist = is_whitelist
         self.override_parents = override_parents
+
+    def _collect_input_fields(self, fields) -> Tuple[Set[str], List[Any]]:
+        field_names: Set[str] = set()
+        non_descriptors: List[Any] = []
+        for field in fields:
+            if type(field).__name__ == 'member_descriptor':
+                field_names.add(field.__name__)
+            elif isinstance(field, property):
+                field_names.add(field.fget.__name__)
+            else:
+                non_descriptors.append(field)
+        return field_names, non_descriptors

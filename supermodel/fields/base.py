@@ -8,10 +8,10 @@ from supermodel.utils import Missing, ConfigurationError
 
 class Field:
     __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'validator_method', 'hide_none',
-                 'primitive_name', 'to_primitive_name')
+                 'primitive_name', 'to_primitive_name', 'serializable')
     type = NotImplemented
     type_repr: str = NotImplemented
-    atomic = True
+    atomic: bool = True
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
@@ -30,6 +30,7 @@ class Field:
             self.to_primitive_name = primitive_name
 
         self.validator_method: Optional[Callable[[Model, Any, Optional[dict]], None]] = None
+        self.serializable: Optional[Callable[[Model], Any]] = None
 
         # Only user-specifiable options are allowed as arguments to avoid user confusion
         self.required: bool = True
@@ -98,7 +99,7 @@ class Field:
             f'{"required" if self.required else f"default=<{self.default}>"}'
             f'{", allow none" if self.allow_none else ""}'
             f'{f", primitive name {self.primitive_name}" if self.primitive_name != self.name else ""}'
-            f'{f" to output {self.to_primitive_name}" if self.to_primitive_name != self.primitive_name else ""}>'
+            f'{f", to output {self.to_primitive_name}" if self.to_primitive_name != self.primitive_name else ""}>'
         )
 
 

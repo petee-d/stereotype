@@ -11,18 +11,19 @@ from supermodel.utils import Missing, ValidationError, ConversionError
 class Model(metaclass=ModelMeta):
     __slots__ = []
     __fields__: List[Field]
+    __input_fields__: List[Field]
     __role_fields__: List[List[Field]]
     __roles__: List[FinalizedRoleFields]
 
     def __init__(self, raw_data: Optional[dict] = None):
-        if self.__fields__ is NotImplemented:
+        if self.__input_fields__ is NotImplemented:
             self.__initialize_model__()
         if raw_data is None:
             raw_data = {}
         elif not isinstance(raw_data, dict):
             raise ConversionError([((), f'Supplied type {type(raw_data).__name__}, needs a mapping')])
 
-        for field in self.__fields__:
+        for field in self.__input_fields__:
             if field.primitive_name is None:
                 value = Missing
             else:
@@ -45,10 +46,16 @@ class Model(metaclass=ModelMeta):
             fields = self.__fields__
         result = {}
         for field in fields:
-            value = getattr(self, field.name)
-            if value is Missing or field.to_primitive_name is None or (value is None and field.hide_none):
-                continue
-            result[field.to_primitive_name] = value if field.atomic else field.to_primitive(value)
+            if field.serializable is None:
+                value = getattr(self, field.name)
+                if value is Missing or field.to_primitive_name is None or (value is None and field.hide_none):
+                    continue
+                result[field.to_primitive_name] = value if field.atomic else field.to_primitive(value)
+            else:
+                value = field.serializable(self)
+                if value is None and field.hide_none:
+                    continue
+                result[field.to_primitive_name] = value
         return result
 
     def serialize(self, role: Optional[Role] = None):
@@ -60,7 +67,7 @@ class Model(metaclass=ModelMeta):
             raise ValidationError(errors)
 
     def validation_errors(self, context: Optional[dict]) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        for field in self.__fields__:
+        for field in self.__input_fields__:
             value = getattr(self, field.name)
             had_native_errors = False
             for path, error in field.validate(value, context):
@@ -88,14 +95,14 @@ class Model(metaclass=ModelMeta):
     def __eq__(self, other: Model):
         if type(self) != type(other):
             return False
-        for field in self.__fields__:
+        for field in self.__input_fields__:
             if getattr(self, field.name) != getattr(other, field.name):
                 return False
         return True
 
     def __repr__(self):
         parts = []
-        for field in self.__fields__:
+        for field in self.__input_fields__:
             base = f'{field.name}='
             value = getattr(self, field.name)
             if field.atomic:

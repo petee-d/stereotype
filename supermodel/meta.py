@@ -4,6 +4,7 @@ from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Union
 
 from supermodel.fields.base import Field, AnyField
 from supermodel.fields.compound import ListField, DictField
+from supermodel.fields.serializable import SerializableField
 from supermodel.roles import Role, RequestedRoleFields, FinalizedRoleFields
 from supermodel.utils import ConfigurationError
 
@@ -16,11 +17,16 @@ class ModelMeta(type):
         if not bases:
             return type.__new__(mcs, name, bases, attrs)
 
+        # Only annotated attributes iterated here for the purposes of slots, not serializable fields
         field_names = [name for name, annotation in mcs._iterate_fields(attrs.get('__annotations__', {}))]
         field_values = {}
         for field_name in field_names:
             if field_name in attrs:
+                # Field attributes popped as they will become instance attributes instead of class attributes
                 field_values[field_name] = attrs.pop(field_name)
+
+        # Find serializable, keep them in `attrs` as they need to remain as properties
+        serializable_names = {name for name, _ in mcs._iterate_serializable(attrs)}
 
         # Using dicts instead of sets to preserve order
         all_slots = {
@@ -33,8 +39,11 @@ class ModelMeta(type):
         else:
             attrs['__slots__'] = all_slots
         attrs['__fields__'] = NotImplemented
+        attrs['__input_fields__'] = NotImplemented
         attrs['__role_fields__'] = NotImplemented
         attrs['__roles__'] = NotImplemented
+
+        own_field_names = set(field_names) | serializable_names
 
         try:
             cls = cast(Type['Model'], type.__new__(mcs, name, bases, attrs))
@@ -42,7 +51,7 @@ class ModelMeta(type):
             raise ConfigurationError(f'{name}: {e}, if inheriting from multiple models, only one may have __slots__ '
                                      f'(declare abstract models without __slots__ by adding class attribute '
                                      f'`__abstract__ = True`)')
-        cls.__initialize_model__ = lambda *_: mcs._initialize_model(cls, bases, field_names, field_values)
+        cls.__initialize_model__ = lambda *_: mcs._initialize_model(cls, bases, own_field_names, field_values)
         return cls
 
     @classmethod
@@ -53,13 +62,14 @@ class ModelMeta(type):
             yield name, annotation
 
     @classmethod
-    def _initialize_model(mcs, cls: Type[Model], bases: Tuple[type, ...], field_names: List[str], field_values: dict):
+    def _initialize_model(mcs, cls: Type[Model], bases: Tuple[type, ...], field_names: Set[str], field_values: dict):
         from supermodel.model import Model
         model_bases = [base for base in bases if issubclass(base, Model) and base is not Model]
 
         mcs._ensure_parent_models(model_bases, field_values)
-        cls.__fields__ = list(mcs._analyze_fields(cls, field_values))
-        mcs._build_roles(cls, model_bases, set(field_names))
+        cls.__input_fields__ = list(mcs._analyze_fields(cls, field_values))
+        cls.__fields__ = cls.__input_fields__ + list(mcs._analyze_serializable(cls))
+        mcs._build_roles(cls, model_bases, field_names)
 
     @classmethod
     def _ensure_parent_models(mcs, model_bases: List[Type[Model]], field_values: dict):
@@ -95,6 +105,22 @@ class ModelMeta(type):
             if validator_method is not None:
                 field.validator_method = validator_method
 
+            yield field
+
+    @classmethod
+    def _iterate_serializable(mcs, attrs: Dict[str, Any]) -> Iterable[Tuple[str, SerializableField]]:
+        for name, attr in attrs.items():
+            if not isinstance(attr, property) or not hasattr(attr.fget, '__field__'):
+                continue
+            field = getattr(attr.fget, '__field__')
+            if isinstance(field, SerializableField):
+                yield name, field
+
+    @classmethod
+    def _analyze_serializable(mcs, cls: Type[Model]):
+        attrs = {name: getattr(cls, name) for name in dir(cls)}
+        for name, field in mcs._iterate_serializable(attrs):
+            field.fill_in_name(name)
             yield field
 
     @staticmethod

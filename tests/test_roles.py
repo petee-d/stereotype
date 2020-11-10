@@ -39,6 +39,12 @@ class TestModels(TestCase):
         model = MyChildRoles({'c1': 1})
         self._assert_my_roles(model)
 
+        self.assertEqual(['a1', 'b1', 'a2', 'c1', 'b2'], MyChildRoles.field_names_for_role(DEFAULT_ROLE))
+        self.assertEqual(['a1', 'a2'], MyChildRoles.field_names_for_role(ROLE_A))
+        self.assertEqual(['b1', 'b2'], model.field_names_for_role(ROLE_B))
+        self.assertEqual(['a1', 'b1', 'a2', 'c1', 'b2'], MyChildRoles.field_names_for_role(ROLE_UNKNOWN_ALL))
+        self.assertEqual([], MyChildRoles.field_names_for_role(ROLE_UNKNOWN_NONE))
+
     def _assert_my_roles(self, model: Model):
         all_serialized = {'a1': 1, 'a2': 2, 'b1': 1.1, 'b2': 2.2, 'c1': '1'}
         self.assertEqual(all_serialized, model.serialize(role=DEFAULT_ROLE))

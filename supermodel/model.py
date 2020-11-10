@@ -124,6 +124,14 @@ class Model(metaclass=ModelMeta):
                 raise NotImplementedError
         return f'<{self.__class__.__name__} {{' + ', '.join(parts) + '}>'
 
+    @classmethod
+    def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
+        if role.code < len(cls.__role_fields__):
+            fields = cls.__role_fields__[role.code]
+        else:
+            fields = [] if role.empty_by_default else cls.__role_fields__[0]
+        return [name for name, *_ in fields]
+
 
 # These rather ugly tuples measurably improve performance compared to accessing field attributes.
 # See their usage for the attributes included.

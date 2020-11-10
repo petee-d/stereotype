@@ -90,3 +90,9 @@ class TestSerializable(TestCase):
         self.assertEqual({'a': 12, 'a_plus_b': -60, 'lower_key': 'B', 'real_a_plus_b': 7}, model.serialize(role_a))
         self.assertEqual({'lower_key': 'B', 'a_plus_b': -60}, model.serialize(role_b))
         model.validate()
+
+    def test_items(self):
+        model = MyModel({})
+        self.assertEqual([], list(model.items()))
+        model = MyModel({'a': 12, 'b': -5})
+        self.assertEqual([('a', 12), ('b', -5)], list(model.items()))

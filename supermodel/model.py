@@ -124,6 +124,13 @@ class Model(metaclass=ModelMeta):
                 raise NotImplementedError
         return f'<{self.__class__.__name__} {{' + ', '.join(parts) + '}>'
 
+    def items(self) -> Iterable[Tuple[str, Any]]:
+        for name, *_ in self.__input_fields__:
+            value = getattr(self, name)
+            if value is Missing:
+                continue
+            yield name, value
+
     @classmethod
     def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
         if role.code < len(cls.__role_fields__):

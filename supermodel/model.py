@@ -48,7 +48,9 @@ class Model(metaclass=ModelMeta):
         for field in fields:
             if field.serializable is None:
                 value = getattr(self, field.name)
-                if value is Missing or field.to_primitive_name is None or (value is None and field.hide_none):
+                if value is Missing or field.to_primitive_name is None:
+                    continue
+                if (value is None and field.hide_none) or (field.hide_empty and value == field.empty_value):
                     continue
                 result[field.to_primitive_name] = value if field.atomic else field.to_primitive(value)
             else:

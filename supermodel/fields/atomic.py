@@ -8,6 +8,12 @@ class BoolField(Field):
     __slots__ = Field.__slots__
     type = bool
     type_repr = 'bool'
+    empty_value = False
+
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_false: bool = False,
+                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_false,
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
 
     def convert(self, value: Any) -> Any:
         if value is Missing:
@@ -58,11 +64,12 @@ class IntField(_BaseNumberField):
     __slots__ = _BaseNumberField.__slots__
     type = int
     type_repr = 'int'
+    empty_value = 0
 
-    def __init__(self, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_zero: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_value: Optional[int] = None, max_value: Optional[int] = None):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_zero,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.min_value = min_value
         self.max_value = max_value
@@ -85,11 +92,12 @@ class FloatField(_BaseNumberField):
     __slots__ = _BaseNumberField.__slots__
     type = float
     type_repr = 'float'
+    empty_value = 0.
 
-    def __init__(self, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_zero: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_value: Optional[float] = None, max_value: Optional[float] = None):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_zero,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.min_value = min_value
         self.max_value = max_value
@@ -100,11 +108,12 @@ class StrField(Field):
     __slots__ = Field.__slots__ + ('min_length', 'max_length', 'choices', 'validate')
     type = str
     type_repr = 'str'
+    empty_value = ''
 
-    def __init__(self, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None, choices: Optional[Iterable[str]] = None):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         if (min_length > 0 or max_length is not None) and choices is not None:
             raise ConfigurationError('Cannot use min_length or max_length together with choices')

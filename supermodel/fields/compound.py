@@ -8,10 +8,10 @@ class _CompoundField(Field):
     __slots__ = Field.__slots__ + ('min_length', 'max_length')
     atomic = False
 
-    def __init__(self, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.min_length = min_length
         self.max_length = max_length
@@ -40,11 +40,13 @@ class _CompoundField(Field):
 class ListField(_CompoundField):
     __slots__ = Field.__slots__ + ('item_field',)
     type = list
+    empty_value = []
 
-    def __init__(self, item_field: Field = NotImplemented, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, item_field: Field = NotImplemented, *,
+                 default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name,
                          min_length=min_length, max_length=max_length)
         self.item_field: Field = item_field
@@ -88,12 +90,13 @@ class ListField(_CompoundField):
 class DictField(_CompoundField):
     __slots__ = Field.__slots__ + ('key_field', 'value_field')
     type = dict
+    empty_value = {}
 
     def __init__(self, key_field: Field = NotImplemented, value_field: Field = NotImplemented, *,
-                 default: Any = Missing, hide_none: bool = False,
+                 default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name,
                          min_length=min_length, max_length=max_length)
         self.key_field: Field = key_field

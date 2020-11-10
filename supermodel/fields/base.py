@@ -7,13 +7,14 @@ from supermodel.utils import Missing, ConfigurationError
 
 
 class Field:
-    __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'validator_method', 'hide_none',
-                 'primitive_name', 'to_primitive_name', 'serializable')
+    __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'validator_method',
+                 'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable')
     type = NotImplemented
     type_repr: str = NotImplemented
     atomic: bool = True
+    empty_value = NotImplemented
 
-    def __init__(self, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
         """
         :param default: default value (including None) if not present in primitive data, required if omitted
@@ -39,6 +40,8 @@ class Field:
         if default is not Missing:
             self.set_default(default)
         self.hide_none = hide_none
+        assert not (hide_empty and self.empty_value is NotImplemented), f'{type(self)} does not support hide_empty'
+        self.hide_empty = hide_empty
 
     def set_default(self, default: Any):
         self.required = False

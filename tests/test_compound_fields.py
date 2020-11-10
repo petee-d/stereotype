@@ -133,6 +133,7 @@ class TestListType(TestCase):
 
         class Stuff(Model):
             hide_none: Optional[List[str]] = ListField(hide_none=True)
+            hide_empty: Optional[List[str]] = ListField(hide_empty=True, default=None)
             custom_output: List[MyStrModel] = ListField(to_primitive_name='custom')
             no_output: List[int] = ListField(primitive_name='input', to_primitive_name=None)
 
@@ -141,9 +142,9 @@ class TestListType(TestCase):
                 yield my_role.blacklist(cls.custom_output)
 
         model = Stuff({'hide_none': ['ok'], 'custom': ['nope'], 'custom_output': [{}], 'input': [1, 2]})
-        self.assertEqual({'hide_none': ['ok'], 'custom': [{'field': ''}]}, model.to_primitive())
+        self.assertEqual({'hide_none': ['ok'], 'hide_empty': None, 'custom': [{'field': ''}]}, model.to_primitive())
 
-        model = Stuff({'hide_none': None, 'custom_output': [{'field': 'abc'}]})
+        model = Stuff({'hide_none': None, 'hide_empty': [], 'custom_output': [{'field': 'abc'}]})
         self.assertEqual({}, model.to_primitive(my_role))
         self.assertEqual({'custom': [{'field': 'abc'}]}, model.to_primitive())
 
@@ -152,7 +153,8 @@ class MyDicts(Model):
     int_to_int: Dict[int, int]
     str_to_floats: Dict[str, List[float]] = DictField(StrField(min_length=2), default=lambda: {'xy': []})
     bool_to_model: Optional[Dict[bool, MyBoolModel]] = None
-    str_to_opt_dict: Dict[str, Optional[Dict[int, int]]] = DictField(value_field=DictField(min_length=1))
+    str_to_opt_dict: Dict[str, Optional[Dict[int, int]]] = DictField(value_field=DictField(min_length=1),
+                                                                     hide_empty=True)
 
 
 class TestDictType(TestCase):
@@ -173,6 +175,12 @@ class TestDictType(TestCase):
         self.assertEqual('<MyDicts {int_to_int=Missing, str_to_floats={(1 items)}, bool_to_model=None, '
                          'str_to_opt_dict=Missing}>', repr(model))
         self.assertEqual('<Field int_to_int of type Dict[int, int], required>', repr(MyDicts.__fields__[0]))
+
+        model.str_to_floats = {}
+        model.str_to_opt_dict = {}
+        self.assertEqual({'bool_to_model': None, 'str_to_floats': {}}, model.serialize())
+        self.assertEqual('<MyDicts {int_to_int=Missing, str_to_floats={}, bool_to_model=None, '
+                         'str_to_opt_dict={}}>', repr(model))
 
     def test_basic(self):
         model = MyDicts({

@@ -36,7 +36,7 @@ class TestBooleanField(TestCase):
         class BoolSpecialModel(Model):
             plain: bool = False
             hidden: Optional[bool] = BoolField(hide_none=True)
-            changed: bool = BoolField(primitive_name='other')
+            changed: bool = BoolField(primitive_name='other', hide_false=True)
             weird: Optional[bool] = BoolField(primitive_name='input', to_primitive_name='output', default=True)
 
         model = BoolSpecialModel({'hidden': None, 'changed': 'ignore', 'other': True, 'output': False, 'weird': False})
@@ -48,8 +48,9 @@ class TestBooleanField(TestCase):
         model.validate()
 
         model.hidden = True
+        model.changed = False
         model.weird = False
-        self.assertEqual({'plain': False, 'hidden': True, 'other': True, 'output': False}, model.serialize())
+        self.assertEqual({'plain': False, 'hidden': True, 'output': False}, model.serialize())
         model.validate()
 
         model.changed = None
@@ -153,6 +154,14 @@ class TestIntField(TestCase):
             NotOptional()
         self.assertEqual('Field `field` is not Optional and cannot use None as default', str(ctx.exception))
 
+    def test_hidden_figures(self):
+        class Hidden(Model):
+            none: Optional[int] = IntField(hide_none=True)
+            zero: Optional[int] = IntField(hide_zero=True)
+
+        self.assertEqual({'none': 0}, Hidden({'none': 0, 'zero': 0}).serialize())
+        self.assertEqual({'zero': None}, Hidden({'none': None, 'zero': None}).serialize())
+
 
 class FloatModel(Model):
     normal: Optional[float] = None
@@ -231,6 +240,15 @@ class TestFloatField(TestCase):
         self.assertEqual('Annotations for <Field my_name of type int, required> require custom field type IntField, '
                          'got FloatField', str(ctx.exception))
 
+    def test_hidden_figures(self):
+        class Hidden(Model):
+            none: Optional[float] = FloatField(hide_none=True, default=None)
+            zero: Optional[float] = FloatField(hide_zero=True, default=0.0)
+
+        self.assertEqual({}, Hidden({}).serialize())
+        self.assertEqual({}, Hidden({'none': None, 'zero': 0}).serialize())
+        self.assertEqual({'none': 0, 'zero': None}, Hidden({'none': 0, 'zero': None}).serialize())
+
 
 class TestStrField(TestCase):
     def test_validation(self):
@@ -271,3 +289,11 @@ class TestStrField(TestCase):
                 unused: LengthChoices
                 bad: str = StrField(min_length=1, choices=('x', 'y', 'zz'))
         self.assertEqual('Cannot use min_length or max_length together with choices', str(ctx.exception))
+
+    def test_hide_empty(self):
+        class Hidden(Model):
+            none: Optional[str] = StrField(hide_none=True)
+            empty: Optional[str] = StrField(hide_empty=True)
+
+        self.assertEqual({'empty': None}, Hidden({'none': None, 'empty': None}).serialize())
+        self.assertEqual({'none': ''}, Hidden({'none': '', 'empty': ''}).serialize())

@@ -65,10 +65,12 @@ class ModelMeta(type):
     def _initialize_model(mcs, cls: Type[Model], bases: Tuple[type, ...], field_names: Set[str], field_values: dict):
         from supermodel.model import Model
         model_bases = [base for base in bases if issubclass(base, Model) and base is not Model]
-
         mcs._ensure_parent_models(model_bases, field_values)
-        cls.__input_fields__ = list(mcs._analyze_fields(cls, field_values))
-        cls.__fields__ = cls.__input_fields__ + list(mcs._analyze_serializable(cls))
+
+        input_fields = list(mcs._analyze_fields(cls, field_values))
+        cls.__input_fields__ = [field.make_input_config() for field in input_fields]
+        serializable = list(mcs._analyze_serializable(cls))
+        cls.__fields__ = input_fields + serializable
         mcs._build_roles(cls, model_bases, field_names)
 
     @classmethod
@@ -263,9 +265,11 @@ class ModelMeta(type):
             elif not role.empty_by_default:
                 finalized.fields.update(own_field_names)
 
-        max_role_code = max((role.code for role in all_roles), default=-1)
-        cls.__role_fields__ = [cls.__fields__] * (max_role_code + 1)
+        max_role_code = max((role.code for role in all_roles), default=0)
+        default_role_fields = [field.make_output_config() for field in cls.__fields__]
+        cls.__role_fields__ = [default_role_fields] * (max_role_code + 1)
         cls.__roles__ = []
         for role, finalized in roles.items():
-            cls.__role_fields__[role.code] = [field for field in cls.__fields__ if field.name in finalized.fields]
+            field_configs = [field.make_output_config() for field in cls.__fields__ if field.name in finalized.fields]
+            cls.__role_fields__[role.code] = field_configs
             cls.__roles__.append(finalized)

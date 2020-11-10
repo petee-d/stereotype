@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from supermodel import Model, Role, ConfigurationError
+from supermodel import Model, Role, ConfigurationError, DEFAULT_ROLE
 
 ROLE_A = Role('a')
 ROLE_B = Role('b', empty_by_default=True)
@@ -41,7 +41,7 @@ class TestModels(TestCase):
 
     def _assert_my_roles(self, model: Model):
         all_serialized = {'a1': 1, 'a2': 2, 'b1': 1.1, 'b2': 2.2, 'c1': '1'}
-        self.assertEqual(all_serialized, model.serialize(role=None))
+        self.assertEqual(all_serialized, model.serialize(role=DEFAULT_ROLE))
         self.assertEqual({'a1': 1, 'a2': 2}, model.serialize(role=ROLE_A))
         self.assertEqual({'b1': 1.1, 'b2': 2.2}, model.serialize(role=ROLE_B))
         self.assertEqual({'c1': '1'}, model.to_primitive(role=ROLE_C))
@@ -140,5 +140,6 @@ class TestModels(TestCase):
                          str(ctx.exception))
 
     def test_role_repr(self):
-        self.assertEqual('<Role a, empty_by_default=False, code=0>', repr(ROLE_A))
-        self.assertEqual('<Role b, empty_by_default=True, code=1>', repr(ROLE_B))
+        self.assertEqual('<Role default, empty_by_default=False, code=0>', repr(DEFAULT_ROLE))
+        self.assertEqual('<Role a, empty_by_default=False, code=1>', repr(ROLE_A))
+        self.assertEqual('<Role b, empty_by_default=True, code=2>', repr(ROLE_B))

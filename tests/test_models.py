@@ -182,7 +182,7 @@ class TestModels(TestCase):
 
         fake_field = FakeField()
         fake_field.name = 'field'
-        Temp.__input_fields__[0] = fake_field
+        Temp.__fields__[0] = fake_field
 
         with self.assertRaises(NotImplementedError):
             repr(Temp())

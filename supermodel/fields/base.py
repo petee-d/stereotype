@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Optional, Callable, Iterable, Tuple
+from typing import Any, Optional, Callable, Iterable, Tuple, TYPE_CHECKING
 
 from supermodel.utils import Missing, ConfigurationError
+
+if TYPE_CHECKING:  # pragma: no cover
+    from supermodel.model import InputFieldConfig, OutputFieldConfig
 
 
 class Field:
@@ -95,6 +98,13 @@ class Field:
         for slot in type(self).__slots__:
             setattr(copied, slot, getattr(self, slot))
         return copied
+
+    def make_input_config(self) -> InputFieldConfig:
+        return self.name, self.primitive_name, self.convert, self.validate, self.validator_method
+
+    def make_output_config(self) -> OutputFieldConfig:
+        return (self.name, self.serializable, self.atomic, self.to_primitive,
+                self.to_primitive_name, self.hide_none, self.hide_empty, self.empty_value)
 
     def __repr__(self):
         return (

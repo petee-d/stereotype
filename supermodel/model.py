@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple, List, Iterable, Type, Set
+from typing import Optional, Tuple, List, Iterable, Type, Set, Callable, Any
 
 from supermodel.fields.base import Field
 from supermodel.meta import ModelMeta
-from supermodel.roles import Role, RequestedRoleFields, FinalizedRoleFields
+from supermodel.roles import Role, RequestedRoleFields, FinalizedRoleFields, DEFAULT_ROLE
 from supermodel.utils import Missing, ValidationError, ConversionError
 
 
 class Model(metaclass=ModelMeta):
     __slots__ = []
     __fields__: List[Field]
-    __input_fields__: List[Field]
-    __role_fields__: List[List[Field]]
+    __input_fields__: List[InputFieldConfig]
+    __role_fields__: List[List[OutputFieldConfig]]
     __roles__: List[FinalizedRoleFields]
 
     def __init__(self, raw_data: Optional[dict] = None):
@@ -23,44 +23,43 @@ class Model(metaclass=ModelMeta):
         elif not isinstance(raw_data, dict):
             raise ConversionError([((), f'Supplied type {type(raw_data).__name__}, needs a mapping')])
 
-        for field in self.__input_fields__:
-            if field.primitive_name is None:
+        for name, primitive_name, convert, validate, validator_method in self.__input_fields__:
+            if primitive_name is None:
                 value = Missing
             else:
-                value = raw_data.get(field.primitive_name, Missing)
+                value = raw_data.get(primitive_name, Missing)
             try:
-                setattr(self, field.name, field.convert(value))
+                setattr(self, name, convert(value))
             except ConversionError as e:
-                raise ConversionError([((field.primitive_name,) + path, error) for path, error in e.error_list])
+                raise ConversionError([((primitive_name,) + path, error) for path, error in e.error_list])
             except (TypeError, ValueError) as e:
-                raise ConversionError([((field.primitive_name,), str(e))])
+                raise ConversionError([((primitive_name,), str(e))])
 
-    def to_primitive(self, role: Optional[Role] = None):
-        if role is None:
-            fields = self.__fields__
-        elif role.code < len(self.__role_fields__):
+    def to_primitive(self, role: Role = DEFAULT_ROLE):
+        if role.code < len(self.__role_fields__):
             fields = self.__role_fields__[role.code]
         elif role.empty_by_default:
             return {}
         else:
-            fields = self.__fields__
+            fields = self.__role_fields__[0]
+
         result = {}
-        for field in fields:
-            if field.serializable is None:
-                value = getattr(self, field.name)
-                if value is Missing or field.to_primitive_name is None:
+        for name, serializable, atomic, to_primitive, to_primitive_name, hide_none, hide_empty, empty_value in fields:
+            if serializable is None:
+                value = getattr(self, name)
+                if value is Missing or to_primitive_name is None:
                     continue
-                if (value is None and field.hide_none) or (field.hide_empty and value == field.empty_value):
+                if (value is None and hide_none) or (hide_empty and value == empty_value):
                     continue
-                result[field.to_primitive_name] = value if field.atomic else field.to_primitive(value)
+                result[to_primitive_name] = value if atomic else to_primitive(value)
             else:
-                value = field.serializable(self)
-                if value is None and field.hide_none:
+                value = serializable(self)
+                if value is None and hide_none:
                     continue
-                result[field.to_primitive_name] = value
+                result[to_primitive_name] = value
         return result
 
-    def serialize(self, role: Optional[Role] = None):
+    def serialize(self, role: Role = DEFAULT_ROLE):
         return self.to_primitive(role)
 
     def validate(self, context: Optional[dict] = None):
@@ -69,17 +68,17 @@ class Model(metaclass=ModelMeta):
             raise ValidationError(errors)
 
     def validation_errors(self, context: Optional[dict]) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        for field in self.__input_fields__:
-            value = getattr(self, field.name)
+        for name, primitive_name, convert, validate, validator_method in self.__input_fields__:
+            value = getattr(self, name)
             had_native_errors = False
-            for path, error in field.validate(value, context):
+            for path, error in validate(value, context):
                 had_native_errors = True
-                yield (field.primitive_name,) + path, error
-            if field.validator_method is not None and not had_native_errors:
+                yield (primitive_name,) + path, error
+            if validator_method is not None and not had_native_errors:
                 try:
-                    field.validator_method(self, value, context)
+                    validator_method(self, value, context)
                 except ValueError as e:
-                    yield (field.primitive_name,), str(e)
+                    yield (primitive_name,), str(e)
 
     @classmethod
     def declare_roles(cls) -> Iterable[RequestedRoleFields]:
@@ -97,15 +96,17 @@ class Model(metaclass=ModelMeta):
     def __eq__(self, other: Model):
         if type(self) != type(other):
             return False
-        for field in self.__input_fields__:
-            if getattr(self, field.name) != getattr(other, field.name):
+        for name, *_ in self.__input_fields__:
+            if getattr(self, name) != getattr(other, name):
                 return False
         return True
 
     def __repr__(self):
         parts = []
-        for field in self.__input_fields__:
+        for field in self.__fields__:
             base = f'{field.name}='
+            if field.serializable is not None:
+                continue
             value = getattr(self, field.name)
             if field.atomic:
                 parts.append(f'{base}{repr(value)}')
@@ -122,3 +123,12 @@ class Model(metaclass=ModelMeta):
             else:
                 raise NotImplementedError
         return f'<{self.__class__.__name__} {{' + ', '.join(parts) + '}>'
+
+
+# These rather ugly tuples measurably improve performance compared to accessing field attributes.
+# See their usage for the attributes included.
+InputFieldConfig = Tuple[str, Optional[str], Callable[[Any], Any],
+                         Callable[[Any, dict], Iterable[Tuple[Tuple[str, ...], str]]],
+                         Optional[Callable[[Model, Any, Optional[dict]], None]]]
+OutputFieldConfig = Tuple[str, Optional[Callable[[Model], Any]], bool,
+                          Callable[[Any], Any], Optional[str], bool, bool, Any]

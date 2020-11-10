@@ -3,5 +3,5 @@ from .fields.compound import ListField
 from .fields.model import ModelField, DynamicModelField
 from .fields.serializable import serializable
 from .model import Model
-from .roles import Role, RequestedRoleFields
+from .roles import Role, DEFAULT_ROLE, RequestedRoleFields
 from .utils import Missing, SupermodelError, ConfigurationError, DataError, ValidationError, ConversionError

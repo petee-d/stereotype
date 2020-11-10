@@ -35,6 +35,8 @@ class Role:
 _roles: List[Role] = []
 _roles_lock = Lock()
 
+DEFAULT_ROLE = Role('default')
+
 
 class FinalizedRoleFields:
     __slots__ = ('role', 'fields')

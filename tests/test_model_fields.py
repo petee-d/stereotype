@@ -5,7 +5,7 @@ from unittest import TestCase
 
 from supermodel import Model, Missing, ValidationError, ConversionError, ModelField, DynamicModelField, \
     ConfigurationError
-from supermodel.tests.common import Leaf
+from tests.common import Leaf
 
 
 class Fake(object):
@@ -119,7 +119,7 @@ class TestDynamicModelField(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Union Model fields can only be Optional or Union of Model subclass types, '
-                         'got typing.Union[supermodel.tests.common.Leaf, test_model_fields.Fake]', str(ctx.exception))
+                         'got typing.Union[tests.common.Leaf, test_model_fields.Fake]', str(ctx.exception))
 
     def test_bad_configuration_no_type(self):
         class Worse(Model):
@@ -128,7 +128,7 @@ class TestDynamicModelField(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             Worse()
         self.assertEqual('Model Trunk used in a dynamic model field '
-                         'typing.Union[supermodel.tests.common.Leaf, test_model_fields.Trunk] '
+                         'typing.Union[tests.common.Leaf, test_model_fields.Trunk] '
                          'but does not define a non-type-annotated string `type` field', str(ctx.exception))
 
     def test_bad_configuration_type_is_a_field(self):
@@ -146,7 +146,7 @@ class TestDynamicModelField(TestCase):
             Horrible()
         self.assertEqual("Model Weird used in a dynamic model field "
                          "typing.Union[test_model_fields.TestDynamicModelField.test_bad_configuration_type_is_a_field."
-                         "<locals>.Weird, supermodel.tests.common.Leaf] "
+                         "<locals>.Weird, tests.common.Leaf] "
                          "but it's `type` field has a type annotation making it a field, must be an attribute",
                          str(ctx.exception))
 
@@ -182,7 +182,7 @@ class TestDynamicModelField(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             CrimeAgainstHumanity()
         self.assertEqual("Conflicting dynamic model field types in typing.Union["
-                         "supermodel.tests.common.Leaf, test_model_fields.Branch, test_model_fields."
+                         "tests.common.Leaf, test_model_fields.Branch, test_model_fields."
                          "TestDynamicModelField.test_bad_configuration_type_conflict.<locals>.AnotherLeaf"
                          "]: Leaf vs AnotherLeaf", str(ctx.exception))
 

@@ -6,7 +6,7 @@ from unittest import TestCase
 from supermodel import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
     FloatField, StrField
 from supermodel.fields.base import Field, AnyField
-from supermodel.tests.common import Leaf
+from tests.common import Leaf
 
 
 class DriedLeaf(Leaf):

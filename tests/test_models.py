@@ -125,6 +125,17 @@ class TestModels(TestCase):
         self.assertNotEqual(1, model)
         self.assertNotEqual(None, model)
 
+    def test_override_field_type(self):
+        class First(Model):
+            plain: int
+            custom: int = IntField(min_value=1)
+
+        class Second(First):
+            plain: float
+            custom: float = FloatField(min_value=2)
+
+        self.assertEqual({'plain': 1.1, 'custom': 2.2}, Second({'plain': '1.1', 'custom': '2.2'}).serialize())
+
     def test_any_field(self):
         class WithAny(Model):
             normal: Any

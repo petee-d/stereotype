@@ -91,6 +91,35 @@ class TestSerializable(TestCase):
         self.assertEqual({'lower_key': 'B', 'a_plus_b': -60}, model.serialize(role_b))
         model.validate()
 
+    def test_serializable_override(self):
+        class First(Model):
+            overridden_attribute: int
+            inherited_attribute: int
+
+            @serializable
+            def overridden_serializable(self) -> int:
+                return -self.inherited_attribute
+
+            @serializable
+            def inherited_serializable(self) -> int:
+                return -self.inherited_attribute
+
+        class Second(First):
+            overridden_serializable: int
+
+            @serializable
+            def overridden_attribute(self) -> int:
+                return -self.overridden_serializable
+
+        model = Second({'overridden_attribute': 1, 'inherited_attribute': 2,
+                        'overridden_serializable': 3, 'inherited_serializable': 1})
+        self.assertEqual(-3, model.overridden_attribute)
+        self.assertEqual(2, model.inherited_attribute)
+        self.assertEqual(3, model.overridden_serializable)
+        self.assertEqual(-2, model.inherited_serializable)
+        self.assertEqual({'overridden_attribute': -3, 'inherited_attribute': 2,
+                          'overridden_serializable': 3, 'inherited_serializable': -2}, model.serialize())
+
     def test_items(self):
         model = MyModel({})
         self.assertEqual([], list(model.items()))

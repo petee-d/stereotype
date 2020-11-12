@@ -18,6 +18,7 @@ has 100% line test coverage.
 - Support for `Model` subclass fields, including recursive definitions
 - Dynamic model fields resolved using a string `type` key
 - Free-form fields using `Any`
+- Calculated `serializable` fields - a `property` present also in serialized data
 - Optional field defaults using atomic values or callables
 - Renaming or disabling fields for purposes of input/output/both
 - Optional hiding of `None` values from output
@@ -31,9 +32,8 @@ has 100% line test coverage.
 - Better ConversionError localisation
 - Support for ForwardRef (quoted types)
 - Generating schema
-- Calculated serializable fields
 
-# Documentation
+# Tutorial
 
 ## Flat models
 

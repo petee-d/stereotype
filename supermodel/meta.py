@@ -37,7 +37,7 @@ class ModelMeta(type):
         if attrs.pop('__abstract__', False):
             attrs['__abstract_slots__'] = all_slots
         else:
-            attrs['__slots__'] = all_slots
+            attrs['__slots__'] = [name for name in all_slots if name not in serializable_names]
         attrs['__fields__'] = NotImplemented
         attrs['__input_fields__'] = NotImplemented
         attrs['__role_fields__'] = NotImplemented
@@ -62,24 +62,27 @@ class ModelMeta(type):
             yield name, annotation
 
     @classmethod
-    def _initialize_model(mcs, cls: Type[Model], bases: Tuple[type, ...], field_names: Set[str], field_values: dict):
+    def _initialize_model(mcs, cls: Type[Model], bases: Tuple[type, ...],
+                          own_field_names: Set[str], field_values: dict):
         from supermodel.model import Model
         model_bases = [base for base in bases if issubclass(base, Model) and base is not Model]
-        mcs._ensure_parent_models(model_bases, field_values)
+        mcs._ensure_parent_models(model_bases, own_field_names, field_values)
 
-        input_fields = list(mcs._analyze_fields(cls, field_values))
-        cls.__input_fields__ = [field.make_input_config() for field in input_fields]
         serializable = list(mcs._analyze_serializable(cls))
+        serializable_names = {field.name for field in serializable}
+        input_fields = [field for field in mcs._analyze_fields(cls, field_values)
+                        if field.name not in serializable_names]
+        cls.__input_fields__ = [field.make_input_config() for field in input_fields]
         cls.__fields__ = input_fields + serializable
-        mcs._build_roles(cls, model_bases, field_names)
+        mcs._build_roles(cls, model_bases, own_field_names)
 
     @classmethod
-    def _ensure_parent_models(mcs, model_bases: List[Type[Model]], field_values: dict):
+    def _ensure_parent_models(mcs, model_bases: List[Type[Model]], own_field_names: Set[str], field_values: dict):
         for base in model_bases:
             if base.__fields__ is NotImplemented:
                 base.__initialize_model__()
             for field in cast(List[Field], base.__fields__):
-                if field.name not in field_values:
+                if field.name not in own_field_names:
                     field_values[field.name] = field.copy()
 
     @classmethod

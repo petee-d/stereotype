@@ -249,15 +249,24 @@ class ModelMeta(type):
 
     @classmethod
     def _build_roles(mcs, cls: Type[Model], bases: List[Type[Model]], own_field_names: Set[str]):
-        all_field_names = {field.name for field in cls.__fields__}
-        own_requested_roles: Dict[Role, RequestedRoleFields] = {}
-        for requested in cls.declare_roles():
-            if requested.role in own_requested_roles:
-                raise ConfigurationError(f'Role {requested.role.name} configured for {cls.__name__} multiple times')
-            own_requested_roles[requested.role] = requested
+        roles = mcs._collect_finalized_roles(cls, bases, own_field_names)
+        max_role_code = max((role.code for role in roles.keys()), default=0)
+        default_role_fields = [field.make_output_config() for field in cls.__fields__]
+        cls.__role_fields__ = [default_role_fields] * (max_role_code + 1)
+        cls.__roles__ = []
 
+        for role, finalized in roles.items():
+            field_configs = [field.make_output_config() for field in cls.__fields__ if field.name in finalized.fields]
+            cls.__role_fields__[role.code] = field_configs
+            cls.__roles__.append(finalized)
+
+    @classmethod
+    def _collect_finalized_roles(mcs, cls: Type[Model], bases: List[Type[Model]], own_field_names: Set[str],
+                                 ) -> Dict[Role, FinalizedRoleFields]:
+        all_field_names, own_requested_roles = mcs._collect_own_requested_roles(cls)
         all_roles = {finalized.role for base in bases for finalized in base.__roles__} | set(own_requested_roles.keys())
         roles: Dict[Role, FinalizedRoleFields] = {role: FinalizedRoleFields(role) for role in all_roles}
+
         for base in reversed(bases):
             base_roles: Dict[Role, FinalizedRoleFields] = {finalized.role: finalized for finalized in base.__roles__}
             for role, finalized in roles.items():
@@ -274,11 +283,14 @@ class ModelMeta(type):
             elif not role.empty_by_default:
                 finalized.fields.update(own_field_names)
 
-        max_role_code = max((role.code for role in all_roles), default=0)
-        default_role_fields = [field.make_output_config() for field in cls.__fields__]
-        cls.__role_fields__ = [default_role_fields] * (max_role_code + 1)
-        cls.__roles__ = []
-        for role, finalized in roles.items():
-            field_configs = [field.make_output_config() for field in cls.__fields__ if field.name in finalized.fields]
-            cls.__role_fields__[role.code] = field_configs
-            cls.__roles__.append(finalized)
+        return roles
+
+    @classmethod
+    def _collect_own_requested_roles(mcs, cls: Type[Model]) -> Tuple[Set[str], Dict[Role, RequestedRoleFields]]:
+        all_field_names = {field.name for field in cls.__fields__}
+        own_requested_roles: Dict[Role, RequestedRoleFields] = {}
+        for requested in cls.declare_roles():
+            if requested.role in own_requested_roles:
+                raise ConfigurationError(f'Role {requested.role.name} configured for {cls.__name__} multiple times')
+            own_requested_roles[requested.role] = requested
+        return all_field_names, own_requested_roles

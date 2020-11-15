@@ -93,7 +93,7 @@ class Field:
     def to_primitive(self, value: Any) -> Any:
         return value
 
-    def copy(self):
+    def copy_field(self):
         copied = type(self)()
         for slot in type(self).__slots__:
             setattr(copied, slot, getattr(self, slot))

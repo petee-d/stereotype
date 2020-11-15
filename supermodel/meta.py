@@ -83,7 +83,7 @@ class ModelMeta(type):
                 base.__initialize_model__()
             for field in cast(List[Field], base.__fields__):
                 if field.name not in own_field_names:
-                    field_values[field.name] = field.copy()
+                    field_values[field.name] = field
 
     @classmethod
     def _analyze_fields(mcs, cls: Type[Model], field_values: dict) -> Iterable[Field]:
@@ -91,7 +91,7 @@ class ModelMeta(type):
             analyzed_field = mcs._analyze_annotation(annotation)
             value = field_values.get(name)
             if isinstance(value, Field):
-                field = value
+                field = value.copy_field()
                 if not isinstance(field, type(analyzed_field)):
                     field.fill_in_name(name)
                     analyzed_field.fill_in_name(name)

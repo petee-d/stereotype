@@ -120,7 +120,7 @@ class TestDynamicModelField(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Union Model fields can only be Optional or Union of Model subclass types, '
-                         'got typing.Union[tests.common.Leaf, test_model_fields.Fake]', str(ctx.exception))
+                         'got typing.Union[tests.common.Leaf, tests.test_model_fields.Fake]', str(ctx.exception))
 
     def test_bad_configuration_no_type(self):
         class Worse(Model):
@@ -129,7 +129,7 @@ class TestDynamicModelField(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             Worse()
         self.assertEqual('Model Trunk used in a dynamic model field '
-                         'typing.Union[tests.common.Leaf, test_model_fields.Trunk] '
+                         'typing.Union[tests.common.Leaf, tests.test_model_fields.Trunk] '
                          'but does not define a non-type-annotated string `type` field', str(ctx.exception))
 
     def test_bad_configuration_type_is_a_field(self):
@@ -145,11 +145,13 @@ class TestDynamicModelField(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Horrible()
-        self.assertEqual("Model Weird used in a dynamic model field "
-                         "typing.Union[test_model_fields.TestDynamicModelField.test_bad_configuration_type_is_a_field."
-                         "<locals>.Weird, tests.common.Leaf] "
-                         "but it's `type` field has a type annotation making it a field, must be an attribute",
-                         str(ctx.exception))
+        self.assertEqual(
+            "Model Weird used in a dynamic model field "
+            "typing.Union[tests.test_model_fields.TestDynamicModelField.test_bad_configuration_type_is_a_field."
+            "<locals>.Weird, tests.common.Leaf] "
+            "but it's `type` field has a type annotation making it a field, must be an attribute",
+            str(ctx.exception),
+        )
 
     def test_bad_configuration_type_not_a_string(self):
         class Nonsense(Model):
@@ -165,7 +167,7 @@ class TestDynamicModelField(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             Atrocity()
         self.assertEqual("Model Nonsense used in a dynamic model field "
-                         "typing.Union[test_model_fields.Branch, test_model_fields.TestDynamicModelField."
+                         "typing.Union[tests.test_model_fields.Branch, tests.test_model_fields.TestDynamicModelField."
                          "test_bad_configuration_type_not_a_string.<locals>.Nonsense] "
                          "but it's `type` field 5 is not a string", str(ctx.exception))
 
@@ -183,7 +185,7 @@ class TestDynamicModelField(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             CrimeAgainstHumanity()
         self.assertEqual("Conflicting dynamic model field types in typing.Union["
-                         "tests.common.Leaf, test_model_fields.Branch, test_model_fields."
+                         "tests.common.Leaf, tests.test_model_fields.Branch, tests.test_model_fields."
                          "TestDynamicModelField.test_bad_configuration_type_conflict.<locals>.AnotherLeaf"
                          "]: Leaf vs AnotherLeaf", str(ctx.exception))
 

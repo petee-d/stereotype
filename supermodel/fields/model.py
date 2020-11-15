@@ -92,7 +92,7 @@ class DynamicModelField(Field):
         except TypeError:
             raise TypeError(f'Expected a mapping with a `type` field, got type {type(value).__name__}')
         except KeyError:
-            raise TypeError(f'Expected a mapping with a `type` field, got no `type` field')
+            raise TypeError('Expected a mapping with a `type` field, got no `type` field')
         type_cls = self.type_map.get(value_type, None)
         if type_cls is None:
             raise TypeError(f'Got a mapping with unsupported `type` {value_type!r}')

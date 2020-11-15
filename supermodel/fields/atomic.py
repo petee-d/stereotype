@@ -139,7 +139,7 @@ class StrField(Field):
 
     def _validate_not_empty(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
         if not value:
-            yield (), f'This value cannot be empty'
+            yield (), 'This value cannot be empty'
 
     def _validate_min_length(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
         if len(value) < self.min_length:

@@ -40,6 +40,7 @@ class ModelMeta(type):
             attrs['__slots__'] = [name for name in all_slots if name not in serializable_names]
         attrs['__fields__'] = NotImplemented
         attrs['__input_fields__'] = NotImplemented
+        attrs['__validated_fields__'] = NotImplemented
         attrs['__role_fields__'] = NotImplemented
         attrs['__roles__'] = NotImplemented
 
@@ -73,6 +74,7 @@ class ModelMeta(type):
         input_fields = [field for field in mcs._analyze_fields(cls, field_values)
                         if field.name not in serializable_names]
         cls.__input_fields__ = [field.make_input_config() for field in input_fields]
+        cls.__validated_fields__ = [field.make_validated_config() for field in input_fields if field.has_validation()]
         cls.__fields__ = input_fields + serializable
         mcs._build_roles(cls, model_bases, own_field_names)
 

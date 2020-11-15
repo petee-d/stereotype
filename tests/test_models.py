@@ -192,7 +192,7 @@ class TestModels(TestCase):
         self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))
 
     def test_missing_coverage(self):
-        # The only meaning of this test is to ensure 100% coverage for dead code
+        # The only purpose of this test is to ensure 100% coverage for *dead* code, where possible
         self.assertEqual(1, IntField().to_primitive(1))
 
         class Temp(Model):
@@ -206,6 +206,7 @@ class TestModels(TestCase):
 
         fake_field = FakeField()
         fake_field.name = 'field'
+        list(fake_field.validate(42, {}))
         Temp.__fields__[0] = fake_field
 
         with self.assertRaises(NotImplementedError):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast
 
 from supermodel.fields.base import Field
@@ -15,14 +17,12 @@ class ModelField(Field):
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
 
         self.type: Type[Model] = cast(Type[Model], NotImplemented)
+        self.native_validate = self.validate
 
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is Missing or value is None:
-            return
         yield from value.validation_errors(context)
 
-    def type_config_from(self, field: 'ModelField'):
+    def type_config_from(self, field: ModelField):
         super().type_config_from(field)
         self.type = field.type
 
@@ -61,14 +61,12 @@ class DynamicModelField(Field):
 
         self.types: Tuple[Type[Model], ...] = NotImplemented
         self.type_map: Dict[str, Type[Model]] = NotImplemented
+        self.native_validate = self.validate
 
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is Missing or value is None:
-            return
         yield from value.validation_errors(context)
 
-    def type_config_from(self, field: 'DynamicModelField'):
+    def type_config_from(self, field: DynamicModelField):
         super().type_config_from(field)
         self.types = field.types
         self.type_map = field.type_map

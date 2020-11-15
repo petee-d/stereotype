@@ -251,14 +251,17 @@ class TestDictType(TestCase):
         data = {
             'int_to_int': None,
             'str_to_floats': {'a': [4.7, None, 42]},
-            'bool_to_model': {None: {'field': False}, True: {'field': True, 'bad_field': True}},
+            'bool_to_model': {None: {'field': False}, True: {'field': True, 'bad_field': True}, False: None},
             'str_to_opt_dict': {'x': {1: 2}, 'y': {}},
         }
         model = MyDicts(data)
         self.assertIs(None, model.int_to_int)
         self.assertEqual({'a': [4.7, None, 42]}, model.str_to_floats)
-        self.assertEqual({None: MyBoolModel({'field': False}), True: MyBoolModel({'field': True, 'bad_field': True})},
-                         model.bool_to_model)
+        self.assertEqual({
+            None: MyBoolModel({'field': False}),
+            True: MyBoolModel({'field': True, 'bad_field': True}),
+            False: None,
+        }, model.bool_to_model)
         self.assertEqual({'x': {1: 2}, 'y': {}}, model.str_to_opt_dict)
         self.assertEqual(data, model.serialize())
         self.assertIsInstance(model.serialize()['str_to_floats']['a'][2], float)
@@ -268,7 +271,9 @@ class TestDictType(TestCase):
             'int_to_int': ['This field is required'],
             'str_to_floats': {'a': {'1': ['This field is required'],
                                     '_global': ['Must be at least 2 characters long']}},
-            'bool_to_model': {'None': ['This field is required'], 'True': {'bad_field': ['Nope']}},
+            'bool_to_model': {'None': ['This field is required'],
+                              'True': {'bad_field': ['Nope']},
+                              'False': ['This field is required']},
             'str_to_opt_dict': {'y': ['Provide at least 1 item']}
         }, ctx.exception.errors)
 

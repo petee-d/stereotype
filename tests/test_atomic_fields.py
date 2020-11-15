@@ -190,7 +190,7 @@ class TestFloatField(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
         self.assertEqual({
-            'min': ['Must be at least 4'],
+            'min': ['Must be at least 4', 'Must be an odd number'],
             'top': ['Must be at most 47.42'],
             'min_max': ['Must be between 1.5 and 4'],
         }, ctx.exception.errors)

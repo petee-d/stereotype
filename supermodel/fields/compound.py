@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Iterable, Tuple
 
 from supermodel.fields.base import Field
@@ -17,10 +19,6 @@ class _CompoundField(Field):
         self.max_length = max_length
 
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is Missing or value is None:
-            return
-
         if self.min_length > 0:
             if self.max_length is not None:
                 if not (self.min_length <= len(value) <= self.max_length):
@@ -28,17 +26,14 @@ class _CompoundField(Field):
                         yield (), f'Provide exactly {self.min_length} item{"s" if self.min_length > 1 else ""}'
                     else:
                         yield (), f'Provide {self.min_length} to {self.max_length} items'
-                    return
             elif len(value) < self.min_length:
                 yield (), f'Provide at least {self.min_length} item{"s" if self.min_length > 1 else ""}'
-                return
         elif self.max_length is not None and len(value) > self.max_length:
             yield (), f'Provide at most {self.max_length} item{"s" if self.max_length > 1 else ""}'
-            return
 
 
 class ListField(_CompoundField):
-    __slots__ = Field.__slots__ + ('item_field',)
+    __slots__ = _CompoundField.__slots__ + ('item_field',)
     type = list
     empty_value = []
 
@@ -50,16 +45,19 @@ class ListField(_CompoundField):
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name,
                          min_length=min_length, max_length=max_length)
         self.item_field: Field = item_field
+        self.native_validate = self.validate
 
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
         yield from super().validate(value, context)
-        if value is None or value is Missing:
-            return
+        item_field = self.item_field
         for index, item in enumerate(value):
-            for path, error in self.item_field.validate(item, context):
-                yield (str(index),) + path, error
+            if item is Missing or (item is None and not item_field.allow_none):
+                yield (str(index),), 'This field is required'
+            elif item is not None and item_field.native_validate is not None:
+                for path, error in item_field.native_validate(item, context):
+                    yield (str(index),) + path, error
 
-    def type_config_from(self, field: 'ListField'):
+    def type_config_from(self, field: ListField):
         super().type_config_from(field)
         if self.item_field is NotImplemented:
             self.item_field: Field = field.item_field
@@ -88,7 +86,7 @@ class ListField(_CompoundField):
 
 
 class DictField(_CompoundField):
-    __slots__ = Field.__slots__ + ('key_field', 'value_field')
+    __slots__ = _CompoundField.__slots__ + ('key_field', 'value_field')
     type = dict
     empty_value = {}
 
@@ -101,18 +99,27 @@ class DictField(_CompoundField):
                          min_length=min_length, max_length=max_length)
         self.key_field: Field = key_field
         self.value_field: Field = value_field
+        self.native_validate = self.validate
 
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
         yield from super().validate(value, context)
-        if not value:
-            return
+        key_field, value_field = self.key_field, self.value_field
         for key, val in value.items():
-            for path, error in self.key_field.validate(key, context):
-                yield (str(key),) + path, error
-            for path, error in self.value_field.validate(val, context):
-                yield (str(key),) + path, error
+            reported_required = False
+            if key is Missing or (key is None and not key_field.allow_none):
+                reported_required = True
+                yield (str(key),), 'This field is required'
+            elif key is not None and key_field.native_validate is not None:
+                for path, error in key_field.native_validate(key, context):
+                    yield (str(key),) + path, error
+            if val is Missing or (val is None and not value_field.allow_none):
+                if not reported_required:
+                    yield (str(key),), 'This field is required'
+            elif val is not None and value_field.native_validate is not None:
+                for path, error in value_field.native_validate(val, context):
+                    yield (str(key),) + path, error
 
-    def type_config_from(self, field: 'DictField'):
+    def type_config_from(self, field: DictField):
         super().type_config_from(field)
         if self.key_field is NotImplemented:
             self.key_field: Field = field.key_field

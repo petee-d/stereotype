@@ -12,6 +12,7 @@ class Model(metaclass=ModelMeta):
     __slots__ = []
     __fields__: List[Field]
     __input_fields__: List[InputFieldConfig]
+    __validated_fields__: List[ValidatedFieldConfig]
     __role_fields__: List[List[OutputFieldConfig]]
     __roles__: List[FinalizedRoleFields]
 
@@ -23,7 +24,7 @@ class Model(metaclass=ModelMeta):
         elif not isinstance(raw_data, dict):
             raise ConversionError([((), f'Supplied type {type(raw_data).__name__}, needs a mapping')])
 
-        for name, primitive_name, convert, validate, validator_method in self.__input_fields__:
+        for name, primitive_name, convert in self.__input_fields__:
             if primitive_name is None:
                 value = Missing
             else:
@@ -68,13 +69,15 @@ class Model(metaclass=ModelMeta):
             raise ValidationError(errors)
 
     def validation_errors(self, context: Optional[dict]) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        for name, primitive_name, convert, validate, validator_method in self.__input_fields__:
+        for name, primitive_name, allow_none, native_validate, validator_method in self.__validated_fields__:
             value = getattr(self, name)
-            had_native_errors = False
-            for path, error in validate(value, context):
-                had_native_errors = True
-                yield (primitive_name,) + path, error
-            if validator_method is not None and not had_native_errors:
+            if value is Missing or (value is None and not allow_none):
+                yield (primitive_name,), 'This field is required'
+                continue
+            if native_validate is not None and value is not None:
+                for path, error in native_validate(value, context):
+                    yield (primitive_name,) + path, error
+            if validator_method is not None:
                 try:
                     validator_method(self, value, context)
                 except ValueError as e:
@@ -101,7 +104,7 @@ class Model(metaclass=ModelMeta):
     def __eq__(self, other: Model):
         if type(self) != type(other):
             return False
-        for name, *_ in self.__input_fields__:
+        for name, primitive_name, convert in self.__input_fields__:
             if getattr(self, name) != getattr(other, name):
                 return False
         return True
@@ -130,7 +133,7 @@ class Model(metaclass=ModelMeta):
         return f'<{self.__class__.__name__} {{' + ', '.join(parts) + '}>'
 
     def items(self) -> Iterable[Tuple[str, Any]]:
-        for name, *_ in self.__input_fields__:
+        for name, primitive_name, convert in self.__input_fields__:
             value = getattr(self, name)
             if value is Missing:
                 continue
@@ -147,8 +150,8 @@ class Model(metaclass=ModelMeta):
 
 # These rather ugly tuples measurably improve performance compared to accessing field attributes.
 # See their usage for the attributes included.
-InputFieldConfig = Tuple[str, Optional[str], Callable[[Any], Any],
-                         Callable[[Any, dict], Iterable[Tuple[Tuple[str, ...], str]]],
-                         Optional[Callable[[Model, Any, Optional[dict]], None]]]
+InputFieldConfig = Tuple[str, Optional[str], Callable[[Any], Any]]
+ValidatedFieldConfig = Tuple[str, str, bool, Optional[Callable[[Any, dict], Iterable[Tuple[Tuple[str, ...], str]]]],
+                             Optional[Callable[[Model, Any, Optional[dict]], None]]]
 OutputFieldConfig = Tuple[str, Optional[Callable[[Model], Any]], bool,
                           Callable[[Any], Any], Optional[str], bool, bool, Any]

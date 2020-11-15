@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Optional, Callable, Iterable, Tuple, TYPE_CHECKING
+from typing import Any, Optional, Callable, Iterable, Tuple, TYPE_CHECKING, Dict
 
 from supermodel.utils import Missing, ConfigurationError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from supermodel.model import InputFieldConfig, OutputFieldConfig
+    from supermodel.model import InputFieldConfig, OutputFieldConfig, ValidatedFieldConfig
 
 
 class Field:
-    __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'validator_method',
+    __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'native_validate', 'validator_method',
                  'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable')
     type = NotImplemented
     type_repr: str = NotImplemented
@@ -33,6 +33,7 @@ class Field:
         if primitive_name is not Missing and to_primitive_name is Missing:
             self.to_primitive_name = primitive_name
 
+        self.native_validate: Optional[Callable[[Any, Optional[Dict]], Iterable[Tuple[Tuple[str, ...], str]]]] = None
         self.validator_method: Optional[Callable[[Model, Any, Optional[dict]], None]] = None
         self.serializable: Optional[Callable[[Model], Any]] = None
 
@@ -54,8 +55,7 @@ class Field:
             self.default = default
 
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        if value is Missing or (value is None and not self.allow_none):
-            yield (), 'This field is required'
+        yield from ()
 
     def type_config_from(self, field: Field):
         self.allow_none = field.allow_none
@@ -96,15 +96,25 @@ class Field:
     def copy_field(self):
         copied = type(self)()
         for slot in type(self).__slots__:
-            setattr(copied, slot, getattr(self, slot))
+            value = getattr(self, slot)
+            if slot == 'native_validate' and value is not None:
+                value = getattr(copied, value.__func__.__name__)
+            setattr(copied, slot, value)
         return copied
 
     def make_input_config(self) -> InputFieldConfig:
-        return self.name, self.primitive_name, self.convert, self.validate, self.validator_method
+        return self.name, self.primitive_name, self.convert
+
+    def make_validated_config(self) -> ValidatedFieldConfig:
+        return (self.name, self.primitive_name or self.to_primitive_name or self.name, self.allow_none,
+                self.native_validate, self.validator_method)
 
     def make_output_config(self) -> OutputFieldConfig:
         return (self.name, self.serializable, self.atomic, self.to_primitive,
                 self.to_primitive_name, self.hide_none, self.hide_empty, self.empty_value)
+
+    def has_validation(self) -> bool:
+        return self.required or not self.allow_none or self.validator_method or self.native_validate
 
     def __repr__(self):
         type_repr = f'Optional[{self.type_repr}]' if self.allow_none else self.type_repr

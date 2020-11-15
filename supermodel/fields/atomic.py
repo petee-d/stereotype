@@ -30,33 +30,28 @@ class BoolField(Field):
 
 
 class _BaseNumberField(Field):
-    __slots__ = Field.__slots__ + ('min_value', 'max_value', 'validate')
+    __slots__ = Field.__slots__ + ('min_value', 'max_value')
     min_value: Union[int, float, None]
     max_value: Union[int, float, None]
 
     def _set_min_max_value_validation(self, min_value: Union[int, float, None], max_value: Union[int, float, None]):
         if min_value is not None and max_value is not None:
-            self.validate = self._validate_min_max_value
+            self.native_validate = self._validate_min_max_value
         elif min_value is not None:
-            self.validate = self._validate_min_value
+            self.native_validate = self._validate_min_value
         elif max_value is not None:
-            self.validate = self._validate_max_value
-        else:
-            self.validate = super().validate
+            self.native_validate = self._validate_max_value
 
     def _validate_min_max_value(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and not (self.min_value <= value <= self.max_value):
+        if not (self.min_value <= value <= self.max_value):
             yield (), f'Must be between {self.min_value} and {self.max_value}'
 
     def _validate_min_value(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and value < self.min_value:
+        if value < self.min_value:
             yield (), f'Must be at least {self.min_value}'
 
     def _validate_max_value(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and value > self.max_value:
+        if value > self.max_value:
             yield (), f'Must be at most {self.max_value}'
 
 
@@ -105,7 +100,7 @@ class FloatField(_BaseNumberField):
 
 
 class StrField(Field):
-    __slots__ = Field.__slots__ + ('min_length', 'max_length', 'choices', 'validate')
+    __slots__ = Field.__slots__ + ('min_length', 'max_length', 'choices')
     type = str
     type_repr = 'str'
     empty_value = ''
@@ -121,44 +116,37 @@ class StrField(Field):
         self.max_length = max_length
         self.choices = {choice: None for choice in choices} if choices is not None else None  # Sets are not ordered
         if self.choices is not None:
-            self.validate = self._validate_choices
+            self.native_validate = self._validate_choices
         elif min_length > 0 and max_length is not None:
-            self.validate = self._validate_min_max_length
+            self.native_validate = self._validate_min_max_length
         elif min_length == 1:
-            self.validate = self._validate_not_empty
+            self.native_validate = self._validate_not_empty
         elif min_length > 0:
-            self.validate = self._validate_min_length
+            self.native_validate = self._validate_min_length
         elif max_length is not None:
-            self.validate = self._validate_max_length
-        else:
-            self.validate = super().validate
+            self.native_validate = self._validate_max_length
 
     def _validate_choices(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and value not in self.choices:
+        if value not in self.choices:
             yield (), f'Must be one of: {", ".join(self.choices)}'
 
     def _validate_min_max_length(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and not (self.min_length <= len(value) <= self.max_length):
+        if not (self.min_length <= len(value) <= self.max_length):
             if self.min_length == self.max_length:
                 yield (), f'Must be exactly {self.min_length} character{"s" if self.min_length > 1 else ""} long'
             else:
                 yield (), f'Must be {self.min_length} to {self.max_length} characters long'
 
     def _validate_not_empty(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and not value:
+        if not value:
             yield (), f'This value cannot be empty'
 
     def _validate_min_length(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and len(value) < self.min_length:
+        if len(value) < self.min_length:
             yield (), f'Must be at least {self.min_length} characters long'
 
     def _validate_max_length(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from super().validate(value, context)
-        if value is not Missing and value is not None and len(value) > self.max_length:
+        if len(value) > self.max_length:
             yield (), f'Must be at most {self.max_length} character{"s" if self.max_length > 1 else ""} long'
 
 

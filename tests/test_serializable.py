@@ -98,7 +98,7 @@ class TestSerializable(TestCase):
 
             @serializable
             def overridden_serializable(self) -> int:
-                return -self.inherited_attribute
+                return -self.overridden_attribute
 
             @serializable
             def inherited_serializable(self) -> int:
@@ -119,6 +119,11 @@ class TestSerializable(TestCase):
         self.assertEqual(-2, model.inherited_serializable)
         self.assertEqual({'overridden_attribute': -3, 'inherited_attribute': 2,
                           'overridden_serializable': 3, 'inherited_serializable': -2}, model.serialize())
+        model = First({'overridden_attribute': 1, 'inherited_attribute': 2})
+        self.assertEqual(-1, model.overridden_serializable)
+        self.assertEqual(-2, model.inherited_serializable)
+        self.assertEqual({'overridden_attribute': 1, 'inherited_attribute': 2,
+                          'overridden_serializable': -1, 'inherited_serializable': -2}, model.serialize())
 
     def test_items(self):
         model = MyModel({})

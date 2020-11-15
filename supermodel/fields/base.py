@@ -102,8 +102,11 @@ class Field:
             setattr(copied, slot, value)
         return copied
 
+    def copy_value(self, value: Any) -> Any:
+        return value
+
     def make_input_config(self) -> InputFieldConfig:
-        return self.name, self.primitive_name, self.convert
+        return self.name, self.primitive_name, self.convert, (None if self.atomic else self.copy_value)
 
     def make_validated_config(self) -> ValidatedFieldConfig:
         return (self.name, self.primitive_name or self.to_primitive_name or self.name, self.allow_none,
@@ -127,15 +130,15 @@ class Field:
 
 
 class AnyField(Field):
-    __slots__ = Field.__slots__ + ('deep_copy', 'atomic')
+    __slots__ = Field.__slots__ + ('deep_copy',)
     type_repr: str = 'Any'
+    atomic = False
 
     def __init__(self, *, deep_copy: bool = False, default: Any = Missing, hide_none: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
         super().__init__(default=default, hide_none=hide_none,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.deep_copy = deep_copy
-        self.atomic = not deep_copy
 
     def check_default(self):
         if not self.required and self.default_factory is None and self.default is None and not self.allow_none:
@@ -145,6 +148,9 @@ class AnyField(Field):
         if value is Missing:
             return self._fill_missing()
         return deepcopy(value) if self.deep_copy else value
+
+    def copy_value(self, value: Any) -> Any:
+        return deepcopy(value)
 
     def to_primitive(self, value: Any) -> Any:
         return deepcopy(value) if self.deep_copy else value

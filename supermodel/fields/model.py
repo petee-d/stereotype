@@ -39,6 +39,11 @@ class ModelField(Field):
             return value
         return self.type(value)
 
+    def copy_value(self, value: Any) -> Any:
+        if value is None or value is Missing:
+            return value
+        return value.copy(deep=True)
+
     def to_primitive(self, value: Any) -> Any:
         if value is None or value is Missing:
             return value
@@ -92,6 +97,11 @@ class DynamicModelField(Field):
         if type_cls is None:
             raise TypeError(f'Got a mapping with unsupported `type` {value_type!r}')
         return type_cls(value)
+
+    def copy_value(self, value: Any) -> Any:
+        if value is None or value is Missing:
+            return value
+        return value.copy(deep=True)
 
     def to_primitive(self, value: Any) -> Any:
         if value is None or value is Missing:

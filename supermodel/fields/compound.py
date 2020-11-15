@@ -72,6 +72,14 @@ class ListField(_CompoundField):
         converter = self.item_field.convert
         return [converter(item) for item in value]
 
+    def copy_value(self, value: Any) -> Any:
+        if value is Missing or value is None:
+            return value
+        if self.item_field.atomic:
+            return list(value)
+        item_copy = self.item_field.copy_value
+        return [item_copy(item) for item in value]
+
     def to_primitive(self, value: Any) -> Any:
         if value is None or value is Missing:
             return value
@@ -140,6 +148,14 @@ class DictField(_CompoundField):
         key_converter = self.key_field.convert
         value_converter = self.value_field.convert
         return {key_converter(key): value_converter(val) for key, val in value.items()}
+
+    def copy_value(self, value: Any) -> Any:
+        if value is None or value is Missing:
+            return value
+        if self.value_field.atomic:
+            return dict(value)
+        item_to_primitive = self.value_field.copy_value
+        return {key: item_to_primitive(val) for key, val in value.items()}
 
     def to_primitive(self, value: Any) -> Any:
         if value is None or value is Missing:

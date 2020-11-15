@@ -24,7 +24,7 @@ class Model(metaclass=ModelMeta):
         elif not isinstance(raw_data, dict):
             raise ConversionError([((), f'Supplied type {type(raw_data).__name__}, needs a mapping')])
 
-        for name, primitive_name, convert in self.__input_fields__:
+        for name, primitive_name, convert, copy_value in self.__input_fields__:
             if primitive_name is None:
                 value = Missing
             else:
@@ -104,7 +104,7 @@ class Model(metaclass=ModelMeta):
     def __eq__(self, other: Model):
         if type(self) != type(other):
             return False
-        for name, primitive_name, convert in self.__input_fields__:
+        for name, primitive_name, convert, copy_value in self.__input_fields__:
             if getattr(self, name) != getattr(other, name):
                 return False
         return True
@@ -133,11 +133,20 @@ class Model(metaclass=ModelMeta):
         return f'<{self.__class__.__name__} {{' + ', '.join(parts) + '}>'
 
     def items(self) -> Iterable[Tuple[str, Any]]:
-        for name, primitive_name, convert in self.__input_fields__:
+        for name, primitive_name, convert, copy_value in self.__input_fields__:
             value = getattr(self, name)
             if value is Missing:
                 continue
             yield name, value
+
+    def copy(self, deep: bool = False) -> Model:
+        copied = self.__new__(self.__class__)
+        for name, primitive_name, convert, copy_value in self.__input_fields__:
+            value = getattr(self, name)
+            if deep and copy_value is not None:
+                value = copy_value(value)
+            setattr(copied, name, value)
+        return copied
 
     @classmethod
     def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
@@ -150,7 +159,7 @@ class Model(metaclass=ModelMeta):
 
 # These rather ugly tuples measurably improve performance compared to accessing field attributes.
 # See their usage for the attributes included.
-InputFieldConfig = Tuple[str, Optional[str], Callable[[Any], Any]]
+InputFieldConfig = Tuple[str, Optional[str], Callable[[Any], Any], Optional[Callable[[Any], Any]]]
 ValidatedFieldConfig = Tuple[str, str, bool, Optional[Callable[[Any, dict], Iterable[Tuple[Tuple[str, ...], str]]]],
                              Optional[Callable[[Model, Any, Optional[dict]], None]]]
 OutputFieldConfig = Tuple[str, Optional[Callable[[Model], Any]], bool,

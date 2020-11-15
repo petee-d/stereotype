@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Set, cast, Any, Optional
+from typing import Set, cast, Any, Optional, List, Dict, Union, Type
 from unittest import TestCase
 
 from supermodel import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
     FloatField, StrField
 from supermodel.fields.base import Field, AnyField
+from supermodel.fields.compound import DictField
 from tests.common import Leaf
 
 
@@ -149,6 +150,80 @@ class TestModels(TestCase):
                          "imported globally, use the class method `resolve_extra_types` to provide it.",
                          str(e.exception))
 
+    def test_copy(self):
+        class Dummy(Model):
+            type = 'dummy'
+            field: List[int] = list
+
+        class CopyRight(Model):
+            atomic: float
+            any: Any
+            atomic_list: List[str]
+            complex_list: Optional[List[List[bool]]] = None
+            atomic_dict: Dict[int, bool] = DictField(hide_none=True)
+            complex_dict: Dict[bool, Dummy]
+            model: Dummy
+            dynamic_model: Optional[Union[Dummy, Leaf]]
+
+            @classmethod
+            def resolve_extra_types(cls) -> Set[Type[Model]]:
+                return {Dummy}
+
+        model = CopyRight({'any': None, 'atomic_dict': None, 'dynamic_model': None})
+        copy = model.copy(deep=True)
+        model.atomic = 4.2
+        model.any = {1: {True: False}}
+        model.atomic_list = ['x']
+        model.complex_list = [[]]
+        model.atomic_dict = {1: True}
+        model.complex_dict = {True: Dummy({'field': [1]})}
+        model.model = None
+        model.dynamic_model = Dummy()
+        self.assertEqual({'any': None, 'complex_list': None, 'dynamic_model': None}, copy.serialize())
+
+        model.model = Dummy({'field': [1, 2]})
+        deep_copy = model.copy(deep=True)
+        shallow_copy = model.copy(deep=False)
+        model.atomic = 4.7
+        model.any[1][False] = True
+        model.any = Missing
+        model.atomic_list.pop(-1)
+        model.complex_list[0].append(True)
+        model.complex_list.extend([[False], [True, False]])
+        model.atomic_dict.pop(1)
+        model.complex_dict[True].field.append(2)
+        model.model.field.clear()
+        model.dynamic_model.field.append(3)
+        self.assertEqual({
+            'atomic': 4.7,
+            'atomic_list': [],
+            'complex_list': [[True], [False], [True, False]],
+            'atomic_dict': {},
+            'complex_dict': {True: {'field': [1, 2]}},
+            'model': {'field': []},
+            'dynamic_model': {'type': 'dummy', 'field': [3]},
+        }, model.to_primitive())
+        self.assertEqual({
+            'atomic': 4.2,
+            'any': {1: {True: False}},
+            'atomic_list': ['x'],
+            'complex_list': [[]],
+            'atomic_dict': {1: True},
+            'complex_dict': {True: {'field': [1]}},
+            'model': {'field': [1, 2]},
+            'dynamic_model': {'type': 'dummy', 'field': []},
+        }, deep_copy.serialize())
+        self.assertEqual({
+            'atomic': 4.2,
+            'any': {1: {True: False, False: True}},
+            'atomic_list': [],
+            'complex_list': [[True], [False], [True, False]],
+            'atomic_dict': {},
+            'complex_dict': {True: {'field': [1, 2]}},
+            'model': {'field': []},
+            'dynamic_model': {'type': 'dummy', 'field': [3]},
+        }, shallow_copy.serialize())
+
     def test_any_field(self):
         class WithAny(Model):
             normal: Any
@@ -207,6 +282,7 @@ class TestModels(TestCase):
         fake_field = FakeField()
         fake_field.name = 'field'
         list(fake_field.validate(42, {}))
+        fake_field.copy_value(42)
         Temp.__fields__[0] = fake_field
 
         with self.assertRaises(NotImplementedError):

@@ -104,4 +104,4 @@ class DynamicModelField(Field):
 
     @property
     def type_repr(self):
-        return '/'.join(option.__name__ for option in self.types)
+        return f'Union[{", ".join(option.__name__ for option in self.types)}]'

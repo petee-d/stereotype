@@ -107,10 +107,10 @@ class Field:
                 self.to_primitive_name, self.hide_none, self.hide_empty, self.empty_value)
 
     def __repr__(self):
+        type_repr = f'Optional[{self.type_repr}]' if self.allow_none else self.type_repr
         return (
-            f'<Field{f" {self.name}" if self.name is not NotImplemented else ""} of type {self.type_repr}, '
+            f'<Field{f" {self.name}" if self.name is not NotImplemented else ""} of type {type_repr}, '
             f'{"required" if self.required else f"default=<{self.default}>"}'
-            f'{", allow none" if self.allow_none else ""}'
             f'{f", primitive name {self.primitive_name}" if self.primitive_name != self.name else ""}'
             f'{f", to output {self.to_primitive_name}" if self.to_primitive_name != self.primitive_name else ""}>'
         )

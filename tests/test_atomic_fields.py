@@ -196,7 +196,7 @@ class TestFloatField(TestCase):
         }, ctx.exception.errors)
         self.assertEqual({'normal': -5.6, 'bottom': 2., 'max': 50.42, 'min_max': 8.}, model.serialize())
 
-        self.assertEqual('<Field normal of type float, default=<None>, allow none>', repr(FloatModel.__fields__[0]))
+        self.assertEqual('<Field normal of type Optional[float], default=<None>>', repr(FloatModel.__fields__[0]))
 
     def test_custom_validation(self):
         model = FloatModel({'min': 4, 'top': None})
@@ -281,7 +281,7 @@ class TestStrField(TestCase):
             'choices': ['Must be one of: a, bb, ccc'],
         }, ctx.exception.errors)
 
-        self.assertEqual('<Field non_empty of type str, required, allow none>', repr(StrModel.__fields__[1]))
+        self.assertEqual('<Field non_empty of type Optional[str], required>', repr(StrModel.__fields__[1]))
 
     def test_bad_validation_combo(self):
         with self.assertRaises(ConfigurationError) as ctx:

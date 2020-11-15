@@ -96,7 +96,8 @@ class TestDynamicModelField(TestCase):
         self.assertIsNone(model.right)
         model.validate()
         self.assertEqual({'left': None, 'right': None}, model.to_primitive())
-        self.assertEqual('<Field left of type Branch/Leaf, default=<None>, allow none>', repr(Trunk.__fields__[0]))
+        self.assertEqual('<Field left of type Optional[Union[Branch, Leaf]], default=<None>>',
+                         repr(Trunk.__fields__[0]))
 
     def test_mixed(self):
         model = Trunk({'left': {'type': 'branch', 'leaf': {'color': 'yellow'}}, 'right': Leaf({'color': 'red'})})
@@ -192,7 +193,7 @@ class TestDynamicModelField(TestCase):
 
         with self.assertRaises(ConversionError) as ctx:
             Dynamic({'field': Root({'depth': 1})})
-        self.assertEqual('field: Expected Leaf/Branch, got Root', str(ctx.exception))
+        self.assertEqual('field: Expected Union[Leaf, Branch], got Root', str(ctx.exception))
 
         with self.assertRaises(ConversionError) as ctx:
             Dynamic({'field': []})

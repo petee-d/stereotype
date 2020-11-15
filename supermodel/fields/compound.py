@@ -84,7 +84,7 @@ class ListField(_CompoundField):
 
     @property
     def type_repr(self):
-        return f'List[{self.item_field.type_repr}]'
+        return f'List[{"?" if self.item_field is NotImplemented else self.item_field.type_repr}]'
 
 
 class DictField(_CompoundField):
@@ -144,4 +144,6 @@ class DictField(_CompoundField):
 
     @property
     def type_repr(self):
-        return f'Dict[{self.key_field.type_repr}, {self.value_field.type_repr}]'
+        key_repr = '?' if self.key_field is NotImplemented else self.key_field.type_repr
+        value_repr = '?' if self.value_field is NotImplemented else self.value_field.type_repr
+        return f'Dict[{key_repr}, {value_repr}]'

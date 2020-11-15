@@ -1,6 +1,7 @@
 from typing import Optional
 
-from supermodel import Model, FloatField
+from supermodel import Model, FloatField, ValidationError, Missing, ConversionError
+
 
 # Keep this file synchronized with the `README.md` documentation!
 
@@ -14,7 +15,8 @@ class Employee(Model):
     human = True
 
     def greeting(self) -> str:
-        return f'Dear { {True: "Ms. ", False: "Mr. "}.get(self.female, "")}{self.name}'
+        title = {True: "Ms. ", False: "Mr. "}.get(self.female, "")
+        return f'Dear {title}{self.name}'
 
 
 model = Employee({'name': 'Jane Doe', 'female': True, 'salary': 150000})
@@ -28,9 +30,6 @@ assert model.greeting() == 'Dear Ms. Jane Doe'
 model.salary = 200000.0
 primitive = model.to_primitive()
 assert primitive == {'name': 'Jane Doe', 'department': 'Engineering', 'female': True, 'salary': 200000.0}
-
-
-from supermodel import ValidationError, Missing  # noqa
 
 model = Employee({'department': None, 'salary': '10'})
 try:
@@ -47,8 +46,6 @@ assert model.name is Missing
 assert model.department is None
 assert model.salary == 10.0
 assert model.to_primitive() == {'department': None, 'female': None, 'salary': 10.0}
-
-from supermodel import ConversionError  # noqa
 
 try:
     model = Employee({'name': 'Alien', 'female': 'Unknown'})

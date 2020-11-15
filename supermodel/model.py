@@ -86,6 +86,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def resolve_extra_types(cls) -> Set[Type[Model]]:
+        """
+        Can be used to return a set of symbols that are not available globally in this model's module, such as
+        locally declared other models or models that cannot be imported globally and use `if TYPE_CHECKING`. Simply
+        return any such model classes in this class method, importing it locally if needed.
+        """
         return set()
 
     def __getitem__(self, key):

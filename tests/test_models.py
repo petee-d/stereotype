@@ -136,6 +136,19 @@ class TestModels(TestCase):
 
         self.assertEqual({'plain': 1.1, 'custom': 2.2}, Second({'plain': '1.1', 'custom': '2.2'}).serialize())
 
+    def test_resolve_extra_types_error(self):
+        class Inner(Model):
+            pass
+
+        class Outer(Model):
+            field: Inner
+
+        with self.assertRaises(ConfigurationError) as e:
+            Outer()
+        self.assertEqual("Model Outer annotation name 'Inner' is not defined. If not a global symbol or cannot be "
+                         "imported globally, use the class method `resolve_extra_types` to provide it.",
+                         str(e.exception))
+
     def test_any_field(self):
         class WithAny(Model):
             normal: Any

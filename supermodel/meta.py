@@ -132,7 +132,11 @@ class ModelMeta(type):
     def _resolve_annotations(cls: Type[Model]) -> Dict[str, Any]:
         extra_types: Set[Type[Model]] = cls.resolve_extra_types()
         extra_locals = {typ.__name__: typ for typ in extra_types}
-        return get_type_hints(cls, localns=extra_locals)
+        try:
+            return get_type_hints(cls, localns=extra_locals)
+        except NameError as e:
+            raise ConfigurationError(f'Model {cls.__name__} annotation {str(e)}. If not a global symbol or cannot be '
+                                     f'imported globally, use the class method `resolve_extra_types` to provide it.')
 
     @classmethod
     def _analyze_annotation(mcs, annotation) -> Field:

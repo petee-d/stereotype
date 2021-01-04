@@ -4,7 +4,7 @@ from typing import Set, cast, Any, Optional, List, Dict, Union, Type
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
-    FloatField, StrField
+    FloatField, StrField, DataError
 from stereotype.fields.base import Field, AnyField
 from stereotype.fields.compound import DictField
 from tests.common import Leaf
@@ -74,13 +74,21 @@ class TestModels(TestCase):
         base.validate()
         self.assertEqual({'a': 0, 'b': 0, 'c': 1}, base.serialize())
 
-    def test_bad_field_type(self):
+    def test_bad_field_type_typing(self):
         class BadType(Model):
             set: Set[int]
 
         with self.assertRaises(ConfigurationError) as ctx:
             BadType()
         self.assertEqual('Unsupported Model field typing.Set[int]', str(ctx.exception))
+
+    def test_bad_field_type_native(self):
+        class BadType(Model):
+            bad: complex
+
+        with self.assertRaises(ConfigurationError) as ctx:
+            BadType()
+        self.assertEqual("Unsupported Model field <class 'complex'>", str(ctx.exception))
 
     def test_multiple_non_abstract_bases(self):
         class Base1(Model):
@@ -287,3 +295,6 @@ class TestModels(TestCase):
 
         with self.assertRaises(NotImplementedError):
             repr(Temp())
+
+        with self.assertRaises(AssertionError):
+            DataError([])

@@ -182,6 +182,7 @@ class FloatModel(Model):
 
 class TestFloatField(TestCase):
     def test_min_max_validation(self):
+        FloatModel({'normal': 1, 'min': 47, 'min_max': 1.5}).validate()
         model = FloatModel({'normal': -5.6, 'min': 2, 'top': '50.42', 'min_max': '8', 'max': 'ignore me'})
         self.assertEqual(-5.6, model.normal)
         self.assertEqual(2, model.min)
@@ -261,8 +262,25 @@ class TestStrField(TestCase):
             exact: str = StrField(min_length=3, max_length=3)
             choices: Optional[str] = StrField(choices=('a', 'bb', 'ccc'))
 
-        model = StrModel({'normal': 4, 'non_empty': '', 'min': 'x', 'max': '123', 'min_max': '', 'exact': True,
-                          'choices': 'c'})
+        StrModel({
+            'normal': 'a',
+            'non_empty': 'abc',
+            'min': 'abc',
+            'max': '',
+            'min_max': 'a',
+            'exact': 'abc',
+            'choices': 'bb',
+        }).validate()
+
+        model = StrModel({
+            'normal': 4,
+            'non_empty': '',
+            'min': 'x',
+            'max': '123',
+            'min_max': '',
+            'exact': True,
+            'choices': 'c',
+        })
         self.assertEqual('4', model.normal)
         self.assertEqual('', model.non_empty)
         self.assertEqual('x', model.min)

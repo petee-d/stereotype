@@ -4,7 +4,7 @@ import math
 from typing import Optional, Iterable
 from unittest import TestCase
 
-from stereotype import Model, serializable, Role, RequestedRoleFields
+from stereotype import Model, serializable, Role, RequestedRoleFields, IntField
 
 role_a = Role('role_a')
 role_b = Role('role_b')
@@ -74,9 +74,15 @@ class TestSerializable(TestCase):
             def real_a_plus_b(self) -> int:
                 return self.a + self.b
 
+            @property
+            def fake_field(self):
+                return 42
+
             @classmethod
             def declare_roles(cls) -> Iterable[RequestedRoleFields]:
                 yield role_b.blacklist(cls.real_a_plus_b)
+
+        ChildModel.fake_field.fget.__field__ = IntField(default=47)
 
         model = ChildModel({'a': 12, 'b': -5})
         self.assertEqual(12, model.a)
@@ -84,6 +90,7 @@ class TestSerializable(TestCase):
         self.assertEqual(-60, model.a_plus_b)
         self.assertEqual(7, model.real_a_plus_b)
         self.assertEqual('B', model.lower_key)
+        self.assertEqual(42, model.fake_field)
         self.assertAlmostEqual(13.0, model.pythagoras, 3)
         self.assertEqual({'a': 12, 'b': -5, 'a_plus_b': -60, 'lower_key': 'B', 'c': 13.0, 'real_a_plus_b': 7},
                          model.serialize())

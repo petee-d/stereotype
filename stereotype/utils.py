@@ -28,11 +28,11 @@ class DataError(StereotypeError):
         super().__init__(self._error_string())
 
     def _error_string(self) -> str:
-        assert self.error_list, 'Cannot create the exception without any errors'
         for path, error in self.error_list:
             if not path:
                 return error
             return f'{": ".join(path)}: {error}'
+        assert self.error_list, 'Cannot create the exception without any errors'
 
     @property
     def errors(self) -> Dict[str, Union[List[str], dict]]:

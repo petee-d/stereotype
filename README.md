@@ -11,7 +11,7 @@ terms of CPU usage and memory footprint. While it wasn't an influence, it is som
 [Pydantic](https://pydantic-docs.helpmanual.io/), but also beats it in benchmarks and provides easier validation.
 
 Stereotype supports Python 3.8 and above (future support for older versions of Python is highly unlikely) and
-has 100% line test coverage.
+has 100% test coverage.
 
 ## Features
 - Support for atomic fields - `bool`, `int`, `float`, `str`

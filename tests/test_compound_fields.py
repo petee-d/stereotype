@@ -274,8 +274,18 @@ class TestDictType(TestCase):
             'bool_to_model': {'None': ['This field is required'],
                               'True': {'bad_field': ['Nope']},
                               'False': ['This field is required']},
-            'str_to_opt_dict': {'y': ['Provide at least 1 item']}
+            'str_to_opt_dict': {'y': ['Provide at least 1 item']},
         }, ctx.exception.errors)
+
+    def test_double_required_error(self):
+        class RequiredDict(Model):
+            dict: Dict[int, int]
+        model = RequiredDict({'dict': {4: 2}})
+        model.validate()
+        self.assertEqual(2, model.dict[4])
+        with self.assertRaises(ValidationError) as ctx:
+            RequiredDict({'dict': {None: None}}).validate()
+        self.assertEqual('dict: None: This field is required', str(ctx.exception))
 
     def test_configuration_error(self):
         class BadKey(Model):

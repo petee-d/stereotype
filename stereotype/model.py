@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Optional, Tuple, List, Iterable, Type, Set, Callable, Any
 
-from supermodel.fields.base import Field
-from supermodel.meta import ModelMeta
-from supermodel.roles import Role, RequestedRoleFields, FinalizedRoleFields, DEFAULT_ROLE
-from supermodel.utils import Missing, ValidationError, ConversionError
+from stereotype.fields.base import Field
+from stereotype.meta import ModelMeta
+from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields, DEFAULT_ROLE
+from stereotype.utils import Missing, ValidationError, ConversionError
 
 
 class Model(metaclass=ModelMeta):

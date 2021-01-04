@@ -3,10 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Optional, Callable, Iterable, Tuple, TYPE_CHECKING, Dict
 
-from supermodel.utils import Missing, ConfigurationError
+from stereotype.utils import Missing, ConfigurationError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from supermodel.model import InputFieldConfig, OutputFieldConfig, ValidatedFieldConfig
+    from stereotype.model import InputFieldConfig, OutputFieldConfig, ValidatedFieldConfig
 
 
 class Field:
@@ -23,7 +23,7 @@ class Field:
         :param default: default value (including None) if not present in primitive data, required if omitted
         :param primitive_name: alternative field name for primitive data
         """
-        from supermodel.model import Model
+        from stereotype.model import Model
 
         # All NotImplemented *must* be updated later based on annotations
         self.name: str = NotImplemented

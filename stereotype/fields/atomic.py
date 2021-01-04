@@ -1,7 +1,7 @@
 from typing import Union, Any, Iterable, Tuple, Optional
 
-from supermodel.fields.base import Field
-from supermodel.utils import Missing, ConfigurationError
+from stereotype.fields.base import Field
+from stereotype.utils import Missing, ConfigurationError
 
 
 class BoolField(Field):

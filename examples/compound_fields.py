@@ -1,7 +1,6 @@
 from typing import List, Dict
 
-from supermodel import Model, ListField, StrField, FloatField, ValidationError
-from supermodel.fields.compound import DictField
+from stereotype import Model, ListField, StrField, FloatField, ValidationError, DictField
 
 
 # Keep this file synchronized with the `README.md` documentation!

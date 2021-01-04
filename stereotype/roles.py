@@ -3,7 +3,7 @@ from __future__ import annotations
 from threading import Lock
 from typing import List, Set, Optional, Any, Tuple
 
-from supermodel.utils import ConfigurationError
+from stereotype.utils import ConfigurationError
 
 
 class Role:

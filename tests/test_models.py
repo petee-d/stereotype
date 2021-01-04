@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Set, cast, Any, Optional, List, Dict, Union, Type
 from unittest import TestCase
 
-from supermodel import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
+from stereotype import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
     FloatField, StrField
-from supermodel.fields.base import Field, AnyField
-from supermodel.fields.compound import DictField
+from stereotype.fields.base import Field, AnyField
+from stereotype.fields.compound import DictField
 from tests.common import Leaf
 
 

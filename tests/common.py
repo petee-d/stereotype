@@ -1,4 +1,4 @@
-from supermodel import Model
+from stereotype import Model
 
 
 class Leaf(Model):

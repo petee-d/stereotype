@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Optional, Iterable, Tuple
 
-from supermodel.fields.base import Field
-from supermodel.utils import Missing
+from stereotype.fields.base import Field
+from stereotype.utils import Missing
 
 
 class _CompoundField(Field):

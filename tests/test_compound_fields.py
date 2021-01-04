@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Optional, Union, List, Dict, cast, Iterable
 from unittest import TestCase
 
-from supermodel import Model, Missing, ValidationError, ConversionError, ModelField, ConfigurationError, ListField, \
+from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, ConfigurationError, ListField, \
     StrField, BoolField
-from supermodel.fields.compound import DictField
-from supermodel.roles import RequestedRoleFields, Role
+from stereotype.fields.compound import DictField
+from stereotype.roles import RequestedRoleFields, Role
 
 
 class MyBoolModel(Model):

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Union, Set, Type, TYPE_CHECKING
 
-from supermodel.fields.base import Field, AnyField
-from supermodel.fields.compound import ListField, DictField
-from supermodel.fields.serializable import SerializableField
-from supermodel.roles import Role, RequestedRoleFields, FinalizedRoleFields
-from supermodel.utils import ConfigurationError
+from stereotype.fields.base import Field, AnyField
+from stereotype.fields.compound import ListField, DictField
+from stereotype.fields.serializable import SerializableField
+from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields
+from stereotype.utils import ConfigurationError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from supermodel.model import Model
+    from stereotype.model import Model
 
 
 class ModelMeta(type):
@@ -65,7 +65,7 @@ class ModelMeta(type):
     @classmethod
     def _initialize_model(mcs, cls: Type[Model], bases: Tuple[type, ...],
                           own_field_names: Set[str], field_values: dict):
-        from supermodel.model import Model
+        from stereotype.model import Model
         model_bases = [base for base in bases if issubclass(base, Model) and base is not Model]
         mcs._ensure_parent_models(model_bases, own_field_names, field_values)
 
@@ -143,7 +143,7 @@ class ModelMeta(type):
     @classmethod
     def _analyze_annotation(mcs, annotation) -> Field:
         """Any supported annotation -> any Field"""
-        from supermodel.model import Model
+        from stereotype.model import Model
 
         typing_repr = repr(annotation)
         if typing_repr.startswith('typing.'):
@@ -166,13 +166,13 @@ class ModelMeta(type):
     @classmethod
     def _analyze_annotation_atomic(mcs, annotation) -> Field:
         """Atomic types -> atomic Field"""
-        from supermodel.fields.atomic import ATOMIC_TYPE_MAPPING
+        from stereotype.fields.atomic import ATOMIC_TYPE_MAPPING
         return ATOMIC_TYPE_MAPPING[annotation]()
 
     @classmethod
     def _analyze_annotation_model(mcs, annotation) -> Field:
         """Model subclass -> ModelField"""
-        from supermodel import ModelField
+        from stereotype import ModelField
         field = ModelField()
         field.type = annotation
         return field
@@ -180,7 +180,7 @@ class ModelMeta(type):
     @classmethod
     def _analyze_annotation_union(mcs, annotation) -> Field:
         """Optional or Union -> any Field with allow_none or DynamicModelField"""
-        from supermodel.model import Model
+        from stereotype.model import Model
 
         options = annotation.__args__
         non_none = [option for option in options if option not in (type(None),)]
@@ -205,7 +205,7 @@ class ModelMeta(type):
     @classmethod
     def _analyze_annotation_model_union(mcs, annotation, options: List[Any]) -> Field:
         """Union[ModelSubClass, ...] -> DynamicModelField"""
-        from supermodel import DynamicModelField
+        from stereotype import DynamicModelField
 
         type_map = {}
         for option in options:

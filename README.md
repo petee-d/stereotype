@@ -1,14 +1,14 @@
-# supermodel
+# stereotype
 
-Supermodel is a performance-focused Python 3.8 library for providing a structure for your data and validating it.
+Stereotype is a performance-focused Python 3.8 library for providing a structure for your data and validating it.
 The models allow fast & easy conversion between primitive data and well-typed Python classes.
 
-Supermodel is heavily influenced by the beauty of [dataclasses](https://docs.python.org/3/library/dataclasses.html)
+Stereotype is heavily influenced by the beauty of [dataclasses](https://docs.python.org/3/library/dataclasses.html)
 and versatility of [Schematics](https://schematics.readthedocs.io/), while having much better performance - both in
 terms of CPU usage and memory footprint. While it wasn't an influence, it is somewhat similar to
 [Pydantic](https://pydantic-docs.helpmanual.io/), but also beats it in benchmarks and provides easier validation.
 
-Supermodel supports Python 3.8 and above (future support for older versions of Python is highly unlikely) and
+Stereotype supports Python 3.8 and above (future support for older versions of Python is highly unlikely) and
 has 100% line test coverage.
 
 ## Features
@@ -31,11 +31,11 @@ has 100% line test coverage.
 
 ## Atomic value fields
 
-Here is a simple flat model defined using supermodel:
+Here is a simple flat model defined using stereotype:
 ```
 from typing import Optional
 
-from supermodel import Model, FloatField, ValidationError, Missing
+from stereotype import Model, FloatField, ValidationError, Missing
 
 
 class Employee(Model):
@@ -58,7 +58,7 @@ class Employee(Model):
 * The assigned value for a field will be used as the default if the key was not present in the input. Note `None` in the
     input will not be converted to the default. The default must be a value of the field's allowed type.
 * If a callable is provided as a default, it will be called with no arguments to create a new default.
-* If the assigned value is a supermodel `***Field`, it can be used to configure more options than the type and default -
+* If the assigned value is a stereotype `***Field`, it can be used to configure more options than the type and default -
     like some basic validation rules, hiding `None` from output, overriding serialization & deserialization names, etc.
 * Fields that don't provide a default (either as the field's assigned value, or using the `default` kwarg to a custom
     field) will be required.
@@ -132,8 +132,8 @@ Fields can also be lists and dictionaries of other fields:
 ```
 from typing import List, Dict
 
-from supermodel import Model, ListField, StrField, FloatField, ValidationError
-from supermodel.fields.compound import DictField
+from stereotype import Model, ListField, StrField, FloatField, ValidationError
+from stereotype.fields.compound import DictField
 
 
 class Book(Model):
@@ -187,7 +187,7 @@ Models can be used as model fields themselves.
 ```
 from __future__ import annotations
 from typing import Optional, Any, Union, List
-from supermodel import Model
+from stereotype import Model
 
 
 class Variable(Model):

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, Union, Type, Set
 from unittest import TestCase
 
-from supermodel import Model, Missing, ValidationError, ConversionError, ModelField, DynamicModelField, \
+from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, DynamicModelField, \
     ConfigurationError
 from tests.common import Leaf
 

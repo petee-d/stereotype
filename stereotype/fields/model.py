@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast
 
-from supermodel.fields.base import Field
-from supermodel.model import Model
-from supermodel.utils import Missing
+from stereotype.fields.base import Field
+from stereotype.model import Model
+from stereotype.utils import Missing
 
 
 class ModelField(Field):

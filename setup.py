@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="supermodel",
-    version="0.0.1",
+    name="stereotype",
+    version="1.0",
     author="Peter Dolák",
     author_email="peter@dolak.sk",
     description="Models for conversion and validation of rich data structures.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/petee-d/supermodel",
+    url="https://github.com/petee-d/stereotype",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

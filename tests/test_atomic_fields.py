@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 from unittest import TestCase
 
-from supermodel import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
+from stereotype import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
     FloatField, StrField
 
 

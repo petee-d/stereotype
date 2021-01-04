@@ -12,15 +12,15 @@ class _MissingType:
 Missing = _MissingType()
 
 
-class SupermodelError(Exception):
+class StereotypeError(Exception):
     pass
 
 
-class ConfigurationError(SupermodelError, AssertionError):
+class ConfigurationError(StereotypeError, AssertionError):
     pass
 
 
-class DataError(SupermodelError):
+class DataError(StereotypeError):
     error_list: List[Tuple[Tuple[str, ...], str]]
 
     def __init__(self, errors: List[Tuple[Tuple[str, ...], str]]):

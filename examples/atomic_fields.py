@@ -1,6 +1,6 @@
 from typing import Optional
 
-from supermodel import Model, FloatField, ValidationError, Missing, ConversionError
+from stereotype import Model, FloatField, ValidationError, Missing, ConversionError
 
 
 # Keep this file synchronized with the `README.md` documentation!

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from supermodel import Model, Role, ConfigurationError, DEFAULT_ROLE
+from stereotype import Model, Role, ConfigurationError, DEFAULT_ROLE
 
 ROLE_A = Role('a')
 ROLE_B = Role('b', empty_by_default=True)

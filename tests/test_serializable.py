@@ -4,7 +4,7 @@ import math
 from typing import Optional, Iterable
 from unittest import TestCase
 
-from supermodel import Model, serializable, Role, RequestedRoleFields
+from stereotype import Model, serializable, Role, RequestedRoleFields
 
 role_a = Role('role_a')
 role_b = Role('role_b')

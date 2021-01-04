@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Callable, Any, Optional, TYPE_CHECKING
 
-from supermodel.fields.base import Field
-from supermodel.utils import Missing
+from stereotype.fields.base import Field
+from stereotype.utils import Missing
 
 if TYPE_CHECKING:  # pragma: no cover
-    from supermodel.model import Model
+    from stereotype.model import Model
 
 
 class SerializableField(Field):

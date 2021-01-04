@@ -1,5 +1,7 @@
 # stereotype
 
+[![codecov.io](https://codecov.io/github/petee-d/stereotype/coverage.svg?branch=master)](https://codecov.io/github/petee-d/stereotype)
+
 Stereotype is a performance-focused Python 3.8 library for providing a structure for your data and validating it.
 The models allow fast & easy conversion between primitive data and well-typed Python classes.
 

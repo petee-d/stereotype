@@ -21,6 +21,9 @@ class SerializableField(Field):
 def serializable(func: Optional[Callable[[Model], Any]] = None, *, hide_none: bool = False,
                  to_primitive_name: str = Missing):
     def serializable_wrapper(wrapped_func: Callable[[Model], Any]):
+        # Support wrapping properties, this allows for better type checking
+        if isinstance(wrapped_func, property):
+            wrapped_func = wrapped_func.fget
         field = SerializableField(wrapped_func, hide_none=hide_none, to_primitive_name=to_primitive_name)
         wrapped_func.__field__ = field
         return property(wrapped_func)

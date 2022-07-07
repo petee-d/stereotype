@@ -25,6 +25,7 @@ class MyModel(Model):
         return 'A' if self.a < self.b else 'B'
 
     @serializable(to_primitive_name='c')
+    @property
     def pythagoras(self) -> float:
         return math.sqrt(self.a * self.a + self.b * self.b)
 

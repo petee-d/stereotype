@@ -10,6 +10,7 @@ from stereotype.utils import Missing, ValidationError, ConversionError
 
 class Model(metaclass=ModelMeta):
     __slots__ = []
+    # Don't use these fields in external code directly, they may not be initialized!
     __fields__: List[Field]
     __input_fields__: List[InputFieldConfig]
     __validated_fields__: List[ValidatedFieldConfig]
@@ -150,6 +151,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
+        if cls.__role_fields__ is NotImplemented:
+            cls.__initialize_model__()
         if role.code < len(cls.__role_fields__):
             fields = cls.__role_fields__[role.code]
         else:

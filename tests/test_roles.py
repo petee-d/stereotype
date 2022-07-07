@@ -36,10 +36,11 @@ class TestModels(TestCase):
         class MyChildRoles(MyRoles):
             pass
 
+        self.assertEqual(['a1', 'b1', 'a2', 'c1', 'b2'], MyChildRoles.field_names_for_role(DEFAULT_ROLE))
+
         model = MyChildRoles({'c1': 1})
         self._assert_my_roles(model)
 
-        self.assertEqual(['a1', 'b1', 'a2', 'c1', 'b2'], MyChildRoles.field_names_for_role(DEFAULT_ROLE))
         self.assertEqual(['a1', 'a2'], MyChildRoles.field_names_for_role(ROLE_A))
         self.assertEqual(['b1', 'b2'], model.field_names_for_role(ROLE_B))
         self.assertEqual(['a1', 'b1', 'a2', 'c1', 'b2'], MyChildRoles.field_names_for_role(ROLE_UNKNOWN_ALL))

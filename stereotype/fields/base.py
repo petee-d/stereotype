@@ -3,6 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Optional, Callable, Iterable, Tuple, TYPE_CHECKING, Dict
 
+from stereotype.fields.annotations import AnnotationResolver
+from stereotype.roles import DEFAULT_ROLE, Role
 from stereotype.utils import Missing, ConfigurationError
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -14,7 +16,7 @@ class Field:
                  'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable')
     type = NotImplemented
     type_repr: str = NotImplemented
-    atomic: bool = True
+    atomic: bool = False
     empty_value = NotImplemented
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
@@ -42,39 +44,51 @@ class Field:
         self.default: Optional[Any] = None
         self.default_factory: Optional[Callable[[], Any]] = None
         if default is not Missing:
-            self.set_default(default)
+            self.init_default(default)
         self.hide_none = hide_none
         assert not (hide_empty and self.empty_value is NotImplemented), f'{type(self)} does not support hide_empty'
         self.hide_empty = hide_empty
 
-    def set_default(self, default: Any):
-        self.required = False
-        if callable(default):
-            self.default_factory = default
-        else:
-            self.default = default
+    def init_from_annotation(self, parser: AnnotationResolver):
+        """Check this Field type is appropriate for the annotation and load any nested types from it."""
+        raise NotImplementedError  # pragma: no cover
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from ()
-
-    def type_config_from(self, field: Field):
-        self.allow_none = field.allow_none
-
-    def fill_in_name(self, name: str):
+    def init_name(self, name: str):
         self.name = name
         if self.primitive_name is Missing:
             self.primitive_name = name
         if self.to_primitive_name is Missing:
             self.to_primitive_name = name
 
+    def init_default(self, default: Any):
+        self.required = False
+        if callable(default):
+            self.default_factory = default
+        else:
+            self.default = default
+
     def check_default(self):
+        """Check the default is valid input for the field. Called after `init_from_annotation` and `init_name`."""
         if self.required or self.default_factory is not None:
             pass
         elif self.default is None:
             if not self.allow_none:
                 raise ConfigurationError(f'Field `{self.name}` is not Optional and cannot use None as default')
-        elif not isinstance(self.default, self.type):
+        elif self.type is not NotImplemented and not isinstance(self.default, self.type):
             raise ConfigurationError(f'Value `{self.default}` used as field default must be of type {self.type_repr}')
+
+    def copy_field(self):
+        """Copies the field definition - explicit Fields must be copied, otherwise subclasses would share them."""
+        copied = type(self)()
+        for slot in type(self).__slots__:
+            value = getattr(self, slot)
+            if slot == 'native_validate' and value is not None:
+                value = getattr(copied, value.__func__.__name__)
+            setattr(copied, slot, value)
+        return copied
+
+    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+        yield from ()
 
     def _fill_missing(self):
         if self.required:
@@ -92,15 +106,6 @@ class Field:
 
     def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         return value
-
-    def copy_field(self):
-        copied = type(self)()
-        for slot in type(self).__slots__:
-            value = getattr(self, slot)
-            if slot == 'native_validate' and value is not None:
-                value = getattr(copied, value.__func__.__name__)
-            setattr(copied, slot, value)
-        return copied
 
     def copy_value(self, value: Any) -> Any:
         return value
@@ -140,9 +145,9 @@ class AnyField(Field):
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.deep_copy = deep_copy
 
-    def check_default(self):
-        if not self.required and self.default_factory is None and self.default is None and not self.allow_none:
-            raise ConfigurationError(f'Field `{self.name}` is not Optional and cannot use None as default')
+    def init_from_annotation(self, parser: AnnotationResolver):
+        if parser.repr != 'typing.Any':
+            raise parser.incorrect_type(self)
 
     def convert(self, value: Any) -> Any:
         if value is Missing:

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Optional, Iterable, Tuple
 
+from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
-from stereotype.utils import Missing
+from stereotype.roles import Role, DEFAULT_ROLE
+from stereotype.utils import Missing, ConfigurationError, ConversionError
 
 
 class _CompoundField(Field):
@@ -17,6 +19,9 @@ class _CompoundField(Field):
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.min_length = min_length
         self.max_length = max_length
+
+    def init_from_annotation(self, parser: AnnotationResolver):
+        raise NotImplementedError  # pragma: no cover
 
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
         if self.min_length > 0:
@@ -47,6 +52,12 @@ class ListField(_CompoundField):
         self.item_field: Field = item_field
         self.native_validate = self.validate
 
+    def init_from_annotation(self, parser: AnnotationResolver):
+        if not parser.repr.startswith('typing.List['):
+            raise parser.incorrect_type(self)
+        item_annotation, = parser.annotation.__args__
+        self.item_field = AnnotationResolver(item_annotation).resolve(self.item_field)
+
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
         yield from super().validate(value, context)
         item_field = self.item_field
@@ -56,13 +67,6 @@ class ListField(_CompoundField):
             elif item is not None and item_field.native_validate is not None:
                 for path, error in item_field.native_validate(item, context):
                     yield (str(index),) + path, error
-
-    def type_config_from(self, field: ListField):
-        super().type_config_from(field)
-        if self.item_field is NotImplemented:
-            self.item_field: Field = field.item_field
-        else:
-            self.item_field.type_config_from(field.item_field)
 
     def convert(self, value: Any) -> Any:
         if value is Missing:
@@ -118,6 +122,15 @@ class DictField(_CompoundField):
         self.value_field: Field = value_field
         self.native_validate = self.validate
 
+    def init_from_annotation(self, parser: AnnotationResolver):
+        if not parser.repr.startswith('typing.Dict['):
+            raise parser.incorrect_type(self)
+        key_annotation, value_annotation = parser.annotation.__args__
+        self.key_field = AnnotationResolver(key_annotation).resolve(self.key_field)
+        if not self.key_field.atomic:
+            raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {parser.repr}')
+        self.value_field = AnnotationResolver(value_annotation).resolve(self.value_field)
+
     def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
         yield from super().validate(value, context)
         key_field, value_field = self.key_field, self.value_field
@@ -135,17 +148,6 @@ class DictField(_CompoundField):
             elif val is not None and value_field.native_validate is not None:
                 for path, error in value_field.native_validate(val, context):
                     yield (str(key),) + path, error
-
-    def type_config_from(self, field: DictField):
-        super().type_config_from(field)
-        if self.key_field is NotImplemented:
-            self.key_field: Field = field.key_field
-        else:
-            self.key_field.type_config_from(field.key_field)
-        if self.value_field is NotImplemented:
-            self.value_field: Field = field.value_field
-        else:
-            self.value_field.type_config_from(field.value_field)
 
     def convert(self, value: Any) -> Any:
         if value is Missing:

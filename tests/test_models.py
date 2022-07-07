@@ -51,6 +51,9 @@ class TestModels(TestCase):
                 if value >= 0:
                     raise ValueError('Must be negative')
 
+        class AnotherChild(MyBase):
+            pass
+
         model = MyChild({'a': 1, 'b': 'ignored', 'bb': 'abc'})
         self.assertEqual(1, model.a)
         self.assertEqual('abc', model.b)
@@ -66,7 +69,7 @@ class TestModels(TestCase):
         self.assertEqual({'a': ['Must be positive'], 'bb': ['Must be truthy'], 'c': ['Must be negative']},
                          ctx.exception.errors)
 
-        # If fields in bases were not copied, b would inherit the validator
+        # If explicit fields were not copied, the validator method may leak to the base class or the other subclass
         base = MyBase({'a': 0, 'b': 0, 'c': 1})
         self.assertEqual(0, base.a)
         self.assertEqual(0, base.b)
@@ -74,13 +77,17 @@ class TestModels(TestCase):
         base.validate()
         self.assertEqual({'a': 0, 'b': 0, 'c': 1}, base.serialize())
 
+        other = AnotherChild({'a': 0, 'b': 0, 'c': 1})
+        other.validate()
+
     def test_bad_field_type_typing(self):
         class BadType(Model):
             set: Set[int]
 
         with self.assertRaises(ConfigurationError) as ctx:
             BadType()
-        self.assertEqual('Unsupported Model field typing.Set[int]', str(ctx.exception))
+        self.assertEqual('Field set: Unrecognized field annotation typing.Set[int] (may need an explicit Field)',
+                         str(ctx.exception))
 
     def test_bad_field_type_native(self):
         class BadType(Model):
@@ -88,7 +95,8 @@ class TestModels(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             BadType()
-        self.assertEqual("Unsupported Model field <class 'complex'>", str(ctx.exception))
+        self.assertEqual("Field bad: Unrecognized field annotation complex (may need an explicit Field)",
+                         str(ctx.exception))
 
     def test_multiple_non_abstract_bases(self):
         class Base1(Model):
@@ -266,10 +274,16 @@ class TestModels(TestCase):
             'optional': ['Must be falsy'],
         }, e.exception.errors)
 
-    def test_any_field_configuration_error(self):
+    def test_any_field_configuration_error_mismatch(self):
+        class Bad(Model):
+            bad: Set[int] = AnyField(hide_none=True)
+        with self.assertRaises(ConfigurationError) as e:
+            Bad()
+        self.assertEqual('Field bad: AnyField cannot be used for annotation typing.Set[int]', str(e.exception))
+
+    def test_any_field_configuration_error_none_default(self):
         class Bad(Model):
             bad: Any = None
-
         with self.assertRaises(ConfigurationError) as e:
             Bad()
         self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))

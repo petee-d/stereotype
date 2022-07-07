@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Any, Optional, TYPE_CHECKING
 
+from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.utils import Missing
 
@@ -16,6 +17,9 @@ class SerializableField(Field):
                  hide_none: bool = False, to_primitive_name: str = Missing):
         super().__init__(hide_none=hide_none, to_primitive_name=to_primitive_name)
         self.serializable = func
+
+    def init_from_annotation(self, parser: AnnotationResolver):
+        raise NotImplementedError  # pragma: no cover
 
 
 def serializable(func: Optional[Callable[[Model], Any]] = None, *, hide_none: bool = False,

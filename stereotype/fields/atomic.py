@@ -1,10 +1,21 @@
+from __future__ import annotations
+
 from typing import Union, Any, Iterable, Tuple, Optional
 
+from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.utils import Missing, ConfigurationError
 
 
-class BoolField(Field):
+class _AtomicField(Field):
+    atomic = True
+
+    def init_from_annotation(self, parser: AnnotationResolver):
+        if parser.annotation is not self.type:
+            raise parser.incorrect_type(self)
+
+
+class BoolField(_AtomicField):
     __slots__ = Field.__slots__
     type = bool
     type_repr = 'bool'
@@ -29,7 +40,7 @@ class BoolField(Field):
         raise TypeError('Value must be a boolean or a true/false/yes/no string value')
 
 
-class _BaseNumberField(Field):
+class _BaseNumberField(_AtomicField):
     __slots__ = Field.__slots__ + ('min_value', 'max_value')
     min_value: Union[int, float, None]
     max_value: Union[int, float, None]
@@ -99,8 +110,8 @@ class FloatField(_BaseNumberField):
         self._set_min_max_value_validation(min_value, max_value)
 
 
-class StrField(Field):
-    __slots__ = Field.__slots__ + ('min_length', 'max_length', 'choices')
+class StrField(_AtomicField):
+    __slots__ = _AtomicField.__slots__ + ('min_length', 'max_length', 'choices')
     type = str
     type_repr = 'str'
     empty_value = ''

@@ -53,7 +53,7 @@ class Model(metaclass=ModelMeta):
                     continue
                 if (value is None and hide_none) or (hide_empty and value == empty_value):
                     continue
-                result[to_primitive_name] = value if atomic else to_primitive(value)
+                result[to_primitive_name] = value if atomic else to_primitive(value, role)
             else:
                 value = serializable(self)
                 if value is None and hide_none:

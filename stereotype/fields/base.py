@@ -90,7 +90,7 @@ class Field:
             return None
         return self.type(value)
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         return value
 
     def copy_field(self):
@@ -152,5 +152,5 @@ class AnyField(Field):
     def copy_value(self, value: Any) -> Any:
         return deepcopy(value)
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         return deepcopy(value) if self.deep_copy else value

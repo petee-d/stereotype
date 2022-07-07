@@ -44,10 +44,10 @@ class ModelField(Field):
             return value
         return value.copy(deep=True)
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         if value is None or value is Missing:
             return value
-        return value.to_primitive()
+        return value.to_primitive(role)
 
     @property
     def type_repr(self):
@@ -103,10 +103,10 @@ class DynamicModelField(Field):
             return value
         return value.copy(deep=True)
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         if value is None or value is Missing:
             return value
-        result = value.to_primitive()
+        result = value.to_primitive(role)
         result['type'] = value.type
         return result
 

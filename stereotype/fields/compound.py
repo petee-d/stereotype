@@ -89,13 +89,13 @@ class ListField(_CompoundField):
         item_copy = self.item_field.copy_value
         return [item_copy(item) for item in value]
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         if value is None or value is Missing:
             return value
         if self.item_field.atomic:
             return list(value)
         item_to_primitive = self.item_field.to_primitive
-        return [item_to_primitive(item) for item in value]
+        return [item_to_primitive(item, role) for item in value]
 
     @property
     def type_repr(self):
@@ -172,13 +172,13 @@ class DictField(_CompoundField):
         item_to_primitive = self.value_field.copy_value
         return {key: item_to_primitive(val) for key, val in value.items()}
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         if value is None or value is Missing:
             return value
         if self.value_field.atomic:
             return dict(value)
         item_to_primitive = self.value_field.to_primitive
-        return {key: item_to_primitive(val) for key, val in value.items()}
+        return {key: item_to_primitive(val, role) for key, val in value.items()}
 
     @property
     def type_repr(self):

@@ -1,3 +1,4 @@
+from typing import Type, Set
 from unittest import TestCase
 
 from stereotype import Model, Role, ConfigurationError, DEFAULT_ROLE
@@ -118,6 +119,41 @@ class TestModels(TestCase):
         self.assertEqual({}, model.serialize(role=ROLE_ALL))
         self.assertEqual(all_serialized, model.serialize(role=ROLE_NONE))
         self.assertEqual({}, model.serialize(role=ROLE_UNKNOWN_NONE))
+
+    def test_nested_model_roles(self):
+        class ChildA(Model):
+            a: str = 'default'
+
+            @classmethod
+            def declare_roles(cls):
+                yield ROLE_C.blacklist(cls.a)
+
+        class ChildB(ChildA):
+            b: int = 7
+
+            @classmethod
+            def declare_roles(cls):
+                yield ROLE_B.whitelist(cls.b)
+
+        class Parent(Model):
+            a: ChildA = ChildA
+            b: ChildB = ChildB
+
+            @classmethod
+            def declare_roles(cls):
+                yield ROLE_B.blacklist(cls.a)
+
+            @classmethod
+            def resolve_extra_types(cls) -> Set[Type[Model]]:
+                return {ChildA, ChildB}
+
+        model = Parent()
+        self.assertEqual({'a': {'a': 'default'}, 'b': {'a': 'default', 'b': 7}}, model.serialize())
+        self.assertEqual({'a': {'a': 'default'}, 'b': {'a': 'default', 'b': 7}}, model.serialize(role=ROLE_A))
+        self.assertEqual({'b': {'b': 7}}, model.serialize(role=ROLE_B))
+        self.assertEqual({'a': {}, 'b': {'b': 7}}, model.serialize(role=ROLE_C))
+        self.assertEqual({'a': {'a': 'default'}, 'b': {'a': 'default', 'b': 7}}, model.serialize(role=ROLE_ALL))
+        self.assertEqual({}, model.serialize(role=ROLE_NONE))
 
     def test_role_configuration_error_conflict(self):
         class BadRoles(Model):

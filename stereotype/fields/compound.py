@@ -70,7 +70,16 @@ class ListField(_CompoundField):
         if value is None:
             return None
         converter = self.item_field.convert
-        return [converter(item) for item in value]
+        converted = []
+        error_index = 0
+        try:
+            for error_index, item in enumerate(value):
+                converted.append(converter(item))
+        except ConversionError as e:
+            raise e.wrapped(str(error_index))
+        except (TypeError, ValueError) as e:
+            raise ConversionError.new(str(e), str(error_index))
+        return converted
 
     def copy_value(self, value: Any) -> Any:
         if value is Missing or value is None:
@@ -147,7 +156,13 @@ class DictField(_CompoundField):
             raise TypeError(f'Expected a dict, got a {type(value).__name__}')
         key_converter = self.key_field.convert
         value_converter = self.value_field.convert
-        return {key_converter(key): value_converter(val) for key, val in value.items()}
+        error_key = Missing  # An error cannot occur before the first assignment to this, so Missing won't be used
+        try:
+            return {key_converter(error_key := key): value_converter(val) for key, val in value.items()}
+        except ConversionError as e:
+            raise e.wrapped(str(error_key))
+        except (TypeError, ValueError) as e:
+            raise ConversionError.new(str(e), str(error_key))
 
     def copy_value(self, value: Any) -> Any:
         if value is None or value is Missing:

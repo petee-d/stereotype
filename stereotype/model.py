@@ -22,7 +22,7 @@ class Model(metaclass=ModelMeta):
         if raw_data is None:
             raw_data = {}
         elif not isinstance(raw_data, dict):
-            raise ConversionError([((), f'Supplied type {type(raw_data).__name__}, needs a mapping')])
+            raise ConversionError.new(f'Supplied type {type(raw_data).__name__}, needs a mapping')
 
         for name, primitive_name, convert, copy_value in self.__input_fields__:
             if primitive_name is None:
@@ -32,9 +32,9 @@ class Model(metaclass=ModelMeta):
             try:
                 setattr(self, name, convert(value))
             except ConversionError as e:
-                raise ConversionError([((primitive_name,) + path, error) for path, error in e.error_list])
+                raise e.wrapped(primitive_name)
             except (TypeError, ValueError) as e:
-                raise ConversionError([((primitive_name,), str(e))])
+                raise ConversionError.new(str(e), primitive_name)
 
     def to_primitive(self, role: Role = DEFAULT_ROLE):
         if role.code < len(self.__role_fields__):

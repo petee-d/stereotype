@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Union, List, Dict, Tuple, cast
 
 
@@ -49,6 +51,13 @@ class DataError(StereotypeError):
             array = container.setdefault(path[-1], [])
             array.append(error)
         return errors
+
+    @classmethod
+    def new(cls, message: str, *path: str):
+        return cls([(path, message)])
+
+    def wrapped(self, *path: str) -> DataError:
+        raise type(self)([(path + original_path, error) for original_path, error in self.error_list])
 
 
 class ValidationError(DataError, ValueError):

@@ -32,6 +32,10 @@ class SomeLists(Model):
     dynamics: List[Union[MyBoolModel, MyStrModel]] = ListField(primitive_name='union')
 
 
+class SimpleInt(Model):
+    int: int
+
+
 class TestListType(TestCase):
     def test_empty(self):
         model = SomeLists()
@@ -148,6 +152,19 @@ class TestListType(TestCase):
         self.assertEqual({}, model.to_primitive(my_role))
         self.assertEqual({'custom': [{'field': 'abc'}]}, model.to_primitive())
 
+    def test_nested_conversion_errors(self):
+        class Collections(Model):
+            models: List[SimpleInt]
+            ints: List[int]
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'models': [{'int': 1}, {'int': 'nan'}, {'int': 'bad'}]})
+        self.assertEqual({'models': {'1': {'int': ["Value 'nan' is not an integer number"]}}}, ctx.exception.errors)
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'ints': ['bad', 'worse']})
+        self.assertEqual({'ints': {'0': ["Value 'bad' is not an integer number"]}}, ctx.exception.errors)
+
 
 class MyDicts(Model):
     int_to_int: Dict[int, int]
@@ -213,14 +230,14 @@ class TestDictType(TestCase):
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'int_to_int': ['Numeric value 4.2 is not an integer'],
+            'int_to_int': {'4.2': ['Numeric value 4.2 is not an integer']},
         }, ctx.exception.errors)
 
         data['int_to_int'] = {1: 2, 4: 4.7}
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'int_to_int': ['Numeric value 4.7 is not an integer'],
+            'int_to_int': {'4': ['Numeric value 4.7 is not an integer']},
         }, ctx.exception.errors)
 
         data['int_to_int'][4] = 7
@@ -234,18 +251,31 @@ class TestDictType(TestCase):
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'bool_to_model': ['Value must be a boolean or a true/false/yes/no string value'],
+            'bool_to_model': {'1': ['Value must be a boolean or a true/false/yes/no string value']},
         }, ctx.exception.errors)
 
         data['bool_to_model'] = {True: None}
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'str_to_opt_dict': ['Expected a dict, got a int'],
+            'str_to_opt_dict': {'4': ['Expected a dict, got a int']},
         }, ctx.exception.errors)
 
         data['str_to_opt_dict'][4] = None
         MyDicts(data)
+
+    def test_nested_conversion_errors(self):
+        class Collections(Model):
+            models: Dict[str, SimpleInt]
+            ints: Dict[str, int]
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'models': {'x': {'int': 'bad'}, 'y': {'int': 2}, '3': {'int': 'y'}}})
+        self.assertEqual({'models': {'x': {'int': ["Value 'bad' is not an integer number"]}}}, ctx.exception.errors)
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'ints': {'x': 1, 'y': '2+3', 'z': 'y'}})
+        self.assertEqual({'ints': {'y': ["Value '2+3' is not an integer number"]}}, ctx.exception.errors)
 
     def test_inner_validation(self):
         data = {

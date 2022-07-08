@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, List, Dict, Tuple, cast
+from typing import Union, List, Dict, Tuple, cast, Any
 
 
 class _MissingType:
@@ -22,10 +22,14 @@ class ConfigurationError(StereotypeError, AssertionError):
     pass
 
 
-class DataError(StereotypeError):
-    error_list: List[Tuple[Tuple[str, ...], str]]
+ValidationContextType = Any  # This serves purely as internal documentation, making types easier to read
+PathErrorType = Tuple[Tuple[str, ...], str]
 
-    def __init__(self, errors: List[Tuple[Tuple[str, ...], str]]):
+
+class DataError(StereotypeError):
+    error_list: List[PathErrorType]
+
+    def __init__(self, errors: List[PathErrorType]):
         self.error_list = errors
         super().__init__(self._error_string())
 

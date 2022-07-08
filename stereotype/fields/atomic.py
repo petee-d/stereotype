@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Union, Any, Iterable, Tuple, Optional
+from typing import Union, Any, Iterable, Optional
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
-from stereotype.utils import Missing, ConfigurationError
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType
 
 
 class _AtomicField(Field):
@@ -53,15 +53,15 @@ class _BaseNumberField(_AtomicField):
         elif max_value is not None:
             self.native_validate = self._validate_max_value
 
-    def _validate_min_max_value(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_min_max_value(self, value: Any, _: ValidationContextType) -> Iterable[PathErrorType]:
         if not (self.min_value <= value <= self.max_value):
             yield (), f'Must be between {self.min_value} and {self.max_value}'
 
-    def _validate_min_value(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_min_value(self, value: Any, _: ValidationContextType) -> Iterable[PathErrorType]:
         if value < self.min_value:
             yield (), f'Must be at least {self.min_value}'
 
-    def _validate_max_value(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_max_value(self, value: Any, _: ValidationContextType) -> Iterable[PathErrorType]:
         if value > self.max_value:
             yield (), f'Must be at most {self.max_value}'
 
@@ -137,26 +137,26 @@ class StrField(_AtomicField):
         elif max_length is not None:
             self.native_validate = self._validate_max_length
 
-    def _validate_choices(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_choices(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
         if value not in self.choices:
             yield (), f'Must be one of: {", ".join(self.choices)}'
 
-    def _validate_min_max_length(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_min_max_length(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
         if not (self.min_length <= len(value) <= self.max_length):
             if self.min_length == self.max_length:
                 yield (), f'Must be exactly {self.min_length} character{"s" if self.min_length > 1 else ""} long'
             else:
                 yield (), f'Must be {self.min_length} to {self.max_length} characters long'
 
-    def _validate_not_empty(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_not_empty(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
         if not value:
             yield (), 'This value cannot be empty'
 
-    def _validate_min_length(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_min_length(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
         if len(value) < self.min_length:
             yield (), f'Must be at least {self.min_length} characters long'
 
-    def _validate_max_length(self, value: str, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def _validate_max_length(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
         if len(value) > self.max_length:
             yield (), f'Must be at most {self.max_length} character{"s" if self.max_length > 1 else ""} long'
 

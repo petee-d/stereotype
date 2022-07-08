@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Iterable, Tuple
+from typing import Any, Optional, Iterable
 
 from stereotype.fields.annotations import AnnotationResolver
-from stereotype.fields.base import Field
+from stereotype.fields.base import Field, ValidationContextType
 from stereotype.roles import Role, DEFAULT_ROLE
-from stereotype.utils import Missing, ConfigurationError, ConversionError
+from stereotype.utils import Missing, ConfigurationError, ConversionError, PathErrorType
 
 
 class _CompoundField(Field):
@@ -23,7 +23,7 @@ class _CompoundField(Field):
     def init_from_annotation(self, parser: AnnotationResolver):
         raise NotImplementedError  # pragma: no cover
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         if self.min_length > 0:
             if self.max_length is not None:
                 if not (self.min_length <= len(value) <= self.max_length):
@@ -58,7 +58,7 @@ class ListField(_CompoundField):
         item_annotation, = parser.annotation.__args__
         self.item_field = AnnotationResolver(item_annotation).resolve(self.item_field)
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)
         item_field = self.item_field
         for index, item in enumerate(value):
@@ -131,7 +131,7 @@ class DictField(_CompoundField):
             raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {parser.repr}')
         self.value_field = AnnotationResolver(value_annotation).resolve(self.value_field)
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)
         key_field, value_field = self.key_field, self.value_field
         for key, val in value.items():

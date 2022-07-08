@@ -6,7 +6,7 @@ from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.model import Model
 from stereotype.roles import Role, DEFAULT_ROLE
-from stereotype.utils import Missing, ConfigurationError
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType
 
 
 class ModelField(Field):
@@ -17,7 +17,6 @@ class ModelField(Field):
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
         super().__init__(default=default, hide_none=hide_none,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
-
         self.type: Type[Model] = cast(Type[Model], NotImplemented)
         self.native_validate = self.validate
 
@@ -26,7 +25,7 @@ class ModelField(Field):
             raise parser.incorrect_type(self)
         self.type = parser.annotation
 
-    def validate(self, value: Model, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def validate(self, value: Model, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from value.validation_errors(context)
 
     def convert(self, value: Any) -> Any:
@@ -66,7 +65,6 @@ class DynamicModelField(Field):
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
         super().__init__(default=default, hide_none=hide_none,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
-
         self.types: Tuple[Type[Model], ...] = NotImplemented
         self.type_map: Dict[str, Type[Model]] = NotImplemented
         self.native_validate = self.validate
@@ -99,7 +97,7 @@ class DynamicModelField(Field):
         self.type_map = type_map
         self.types = tuple(type_map.values())
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from value.validation_errors(context)
 
     def convert(self, value: Any) -> Any:

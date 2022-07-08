@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Optional, Callable, Iterable, Tuple, TYPE_CHECKING, Dict
+from typing import Any, Optional, Callable, Iterable, TYPE_CHECKING
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.roles import DEFAULT_ROLE, Role
-from stereotype.utils import Missing, ConfigurationError
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType
 
 if TYPE_CHECKING:  # pragma: no cover
-    from stereotype.model import InputFieldConfig, OutputFieldConfig, ValidatedFieldConfig
+    from stereotype.model import _OutputFieldConfig, _InputFieldConfig, _ValidatedFieldConfig, _ValidatorMethod, \
+        _NativeValidator, _SerializableFn
 
 
 class Field:
@@ -25,8 +26,6 @@ class Field:
         :param default: default value (including None) if not present in primitive data, required if omitted
         :param primitive_name: alternative field name for primitive data
         """
-        from stereotype.model import Model
-
         # All NotImplemented *must* be updated later based on annotations
         self.name: str = NotImplemented
         self.allow_none: bool = False
@@ -35,9 +34,9 @@ class Field:
         if primitive_name is not Missing and to_primitive_name is Missing:
             self.to_primitive_name = primitive_name
 
-        self.native_validate: Optional[Callable[[Any, Optional[Dict]], Iterable[Tuple[Tuple[str, ...], str]]]] = None
-        self.validator_method: Optional[Callable[[Model, Any, Optional[dict]], None]] = None
-        self.serializable: Optional[Callable[[Model], Any]] = None
+        self.native_validate: Optional[_NativeValidator] = None
+        self.validator_method: Optional[_ValidatorMethod] = None
+        self.serializable: Optional[_SerializableFn] = None
 
         # Only user-specifiable options are allowed as arguments to avoid user confusion
         self.required: bool = True
@@ -87,7 +86,7 @@ class Field:
             setattr(copied, slot, value)
         return copied
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from ()
 
     def _fill_missing(self):
@@ -110,15 +109,15 @@ class Field:
     def copy_value(self, value: Any) -> Any:
         return value
 
-    def make_input_config(self) -> InputFieldConfig:
+    def make_input_config(self) -> _InputFieldConfig:
         return self.name, self.primitive_name, self.convert, (None if self.atomic else self.copy_value)
 
-    def make_validated_config(self) -> ValidatedFieldConfig:
+    def make_validated_config(self) -> _ValidatedFieldConfig:
         return (self.name, self.primitive_name or self.to_primitive_name or self.name, self.allow_none,
                 self.native_validate, self.validator_method)
 
-    def make_output_config(self) -> OutputFieldConfig:
-        return (self.name, self.serializable, self.atomic, self.to_primitive,
+    def make_output_config(self) -> _OutputFieldConfig:
+        return (self.name, self.serializable, self.to_primitive if not self.atomic else None,
                 self.to_primitive_name, self.hide_none, self.hide_empty, self.empty_value)
 
     def has_validation(self) -> bool:

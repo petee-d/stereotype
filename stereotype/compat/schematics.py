@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Optional, Type, cast, Iterable, Tuple
+from typing import Any, Optional, Type, cast, Iterable
 
 from schematics.exceptions import ValidationError as SchematicsValidationError
 from schematics.models import Model as SchematicsModel
@@ -7,7 +7,7 @@ from schematics.models import Model as SchematicsModel
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.model import ModelField
 from stereotype.roles import DEFAULT_ROLE, Role
-from stereotype.utils import Missing
+from stereotype.utils import Missing, ValidationContextType, PathErrorType
 
 
 class SchematicsModelField(ModelField):
@@ -24,7 +24,7 @@ class SchematicsModelField(ModelField):
             raise parser.incorrect_type(self)
         self.type = parser.annotation
 
-    def validate(self, value: SchematicsModel, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+    def validate(self, value: SchematicsModel, context: ValidationContextType) -> Iterable[PathErrorType]:
         try:
             value.validate()  # Cannot propagate the context to schematics
         except SchematicsValidationError as e:
@@ -43,7 +43,7 @@ class SchematicsModelField(ModelField):
         return value.to_primitive(role_str)
 
 
-def _iterate_validation_errors(messages: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
+def _iterate_validation_errors(messages: dict) -> Iterable[PathErrorType]:
     for key, container in messages.items():
         if isinstance(container, list):
             for error in container:

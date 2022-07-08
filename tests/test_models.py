@@ -297,6 +297,7 @@ class TestModels(TestCase):
 
         Temp()
 
+        # noinspection PyAbstractClass
         class FakeField(Field):
             atomic = False
             type = set
@@ -306,9 +307,6 @@ class TestModels(TestCase):
         list(fake_field.validate(42, {}))
         fake_field.copy_value(42)
         Temp.__fields__[0] = fake_field
-
-        with self.assertRaises(NotImplementedError):
-            repr(Temp())
 
         with self.assertRaises(AssertionError):
             DataError([])

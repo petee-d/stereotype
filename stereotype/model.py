@@ -117,9 +117,7 @@ class Model(metaclass=ModelMeta):
             if field.serializable is not None:
                 continue
             value = getattr(self, field.name)
-            if field.atomic:
-                parts.append(f'{base}{repr(value)}')
-            elif field.type is list or field.type is dict:
+            if field.type is list or field.type is dict:
                 if value:
                     if field.type is list:
                         parts.append(f'{base}[({len(value)} items)]')
@@ -130,7 +128,7 @@ class Model(metaclass=ModelMeta):
             elif issubclass(field.type, Model):
                 parts.append(f'{base}{type(value).__name__ if isinstance(value, Model) else value}')
             else:
-                raise NotImplementedError
+                parts.append(f'{base}{repr(value)}')
         return f'<{self.__class__.__name__} {{' + ', '.join(parts) + '}>'
 
     def items(self) -> Iterable[Tuple[str, Any]]:

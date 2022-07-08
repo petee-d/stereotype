@@ -4,7 +4,7 @@ from typing import Optional, Union, Type, Set
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, DynamicModelField, \
-    ConfigurationError
+    ConfigurationError, IntField
 from tests.common import Leaf
 
 
@@ -63,6 +63,21 @@ class TestModelType(TestCase):
         self.assertEqual('<Branch {leaf=Leaf, branch=Branch}>', repr(model))
         self.assertEqual({'leaf': {'color': 'yellow'}, 'sub-branch': {'leaf': {'color': 'green'}}}, model.serialize())
         model.validate()
+
+    def test_hide_empty(self):
+        class MayBeEmpty(Model):
+            no_zero: int = IntField(hide_zero=True, default=0)
+
+        class Container(Model):
+            maybe: MayBeEmpty = ModelField(hide_empty=True, default=MayBeEmpty)
+
+            @classmethod
+            def resolve_extra_types(cls) -> Set[Type[Model]]:
+                return {MayBeEmpty}
+
+        self.assertEqual({'maybe': {'no_zero': 1}}, Container({'maybe': {'no_zero': 1}}).serialize())
+        self.assertEqual({}, Container({'maybe': {'no_zero': 0}}).serialize())
+        self.assertEqual({}, Container().serialize())
 
     def test_bad_type(self):
         with self.assertRaises(ConversionError) as ctx:

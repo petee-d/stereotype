@@ -12,10 +12,11 @@ from stereotype.utils import Missing, ConfigurationError, PathErrorType, Validat
 class ModelField(Field):
     __slots__ = Field.__slots__ + ('type',)
     atomic = False
+    empty_value = {}
 
-    def __init__(self, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.type: Type[Model] = cast(Type[Model], NotImplemented)
         self.native_validate = self.validate

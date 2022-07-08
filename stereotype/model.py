@@ -51,9 +51,10 @@ class Model(metaclass=ModelMeta):
                 value = getattr(self, name)
                 if value is Missing or to_primitive_name is None:
                     continue
-                if (value is None and hide_none) or (hide_empty and value == empty_value):
+                converted = to_primitive(value, role) if to_primitive is not None else value
+                if (converted is None and hide_none) or (hide_empty and converted == empty_value):
                     continue
-                result[to_primitive_name] = to_primitive(value, role) if to_primitive is not None else value
+                result[to_primitive_name] = converted
             else:
                 value = serializable(self)
                 if value is None and hide_none:

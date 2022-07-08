@@ -155,7 +155,7 @@ class Model(metaclass=ModelMeta):
             fields = cls.__role_fields__[role.code]
         else:
             fields = [] if role.empty_by_default else cls.__role_fields__[0]
-        return [name for name, *_ in fields]
+        return [primitive_name for _, _, _, primitive_name, _, _, _ in fields if primitive_name is not None]
 
 
 _NativeValidator = Callable[[Any, ValidationContextType], Iterable[PathErrorType]]

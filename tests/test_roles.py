@@ -1,7 +1,7 @@
 from typing import Type, Set
 from unittest import TestCase
 
-from stereotype import Model, Role, ConfigurationError, DEFAULT_ROLE
+from stereotype import Model, Role, ConfigurationError, DEFAULT_ROLE, IntField
 
 ROLE_A = Role('a')
 ROLE_B = Role('b', empty_by_default=True)
@@ -15,9 +15,10 @@ ROLE_UNKNOWN_NONE = Role('unknown_2', empty_by_default=True)
 class MyRoles(Model):
     a1: int = 1
     b1: float = 1.1
-    a2: int = 2
+    a2: int = IntField(to_primitive_name='a_2', default=2)
     c1: str
     b2: float = 2.2
+    hidden: int = IntField(to_primitive_name=None, default=404)
 
     @classmethod
     def declare_roles(cls):
@@ -37,20 +38,20 @@ class TestModels(TestCase):
         class MyChildRoles(MyRoles):
             pass
 
-        self.assertEqual(['a1', 'b1', 'a2', 'c1', 'b2'], MyChildRoles.field_names_for_role(DEFAULT_ROLE))
+        self.assertEqual(['a1', 'b1', 'a_2', 'c1', 'b2'], MyChildRoles.field_names_for_role(DEFAULT_ROLE))
 
         model = MyChildRoles({'c1': 1})
         self._assert_my_roles(model)
 
-        self.assertEqual(['a1', 'a2'], MyChildRoles.field_names_for_role(ROLE_A))
+        self.assertEqual(['a1', 'a_2'], MyChildRoles.field_names_for_role(ROLE_A))
         self.assertEqual(['b1', 'b2'], model.field_names_for_role(ROLE_B))
-        self.assertEqual(['a1', 'b1', 'a2', 'c1', 'b2'], MyChildRoles.field_names_for_role(ROLE_UNKNOWN_ALL))
+        self.assertEqual(['a1', 'b1', 'a_2', 'c1', 'b2'], MyChildRoles.field_names_for_role(ROLE_UNKNOWN_ALL))
         self.assertEqual([], MyChildRoles.field_names_for_role(ROLE_UNKNOWN_NONE))
 
     def _assert_my_roles(self, model: Model):
-        all_serialized = {'a1': 1, 'a2': 2, 'b1': 1.1, 'b2': 2.2, 'c1': '1'}
+        all_serialized = {'a1': 1, 'a_2': 2, 'b1': 1.1, 'b2': 2.2, 'c1': '1'}
         self.assertEqual(all_serialized, model.serialize(role=DEFAULT_ROLE))
-        self.assertEqual({'a1': 1, 'a2': 2}, model.serialize(role=ROLE_A))
+        self.assertEqual({'a1': 1, 'a_2': 2}, model.serialize(role=ROLE_A))
         self.assertEqual({'b1': 1.1, 'b2': 2.2}, model.serialize(role=ROLE_B))
         self.assertEqual({'c1': '1'}, model.to_primitive(role=ROLE_C))
         self.assertEqual(all_serialized, model.serialize(role=ROLE_UNKNOWN_ALL))
@@ -74,16 +75,17 @@ class TestModels(TestCase):
                 yield ROLE_B.blacklist(cls.a3, cls.a4)
 
         model = MyChildRoles({'c1': 1})
-        all_serialized = {'a1': 1, 'a2': 2, 'b1': 1.1, 'b2': 2.2, 'c1': '1', 'a3': 3, 'a4': 4, 'b3': 3.3}
+        all_serialized = {'a1': 1, 'a_2': 2, 'b1': 1.1, 'b2': 2.2, 'c1': '1', 'a3': 3, 'a4': 4, 'b3': 3.3}
         self.assertEqual(all_serialized, model.serialize())
-        self.assertEqual({'a1': 1, 'a2': 2, 'a3': 3, 'a4': 4}, model.serialize(role=ROLE_A))
+        self.assertEqual({'a1': 1, 'a_2': 2, 'a3': 3, 'a4': 4}, model.serialize(role=ROLE_A))
         self.assertEqual({'b1': 1.1, 'b2': 2.2, 'b3': 3.3}, model.serialize(role=ROLE_B))
         self.assertEqual({'a3': 3, 'a4': 4, 'b3': 3.3, 'c1': '1'}, model.serialize(role=ROLE_C))
         self.assertEqual(all_serialized, model.serialize(role=ROLE_UNKNOWN_ALL))
         self.assertEqual(all_serialized, model.serialize(role=ROLE_ALL))
         self.assertEqual({}, model.serialize(role=ROLE_NONE))
         self.assertEqual({}, model.serialize(role=ROLE_UNKNOWN_NONE))
-        self.assertEqual("<MyChildRoles {a3=3, a1=1, b1=1.1, a2=2, c1='1', b2=2.2, a4=4, b3=3.3}>", repr(model))
+        self.assertEqual("<MyChildRoles {a3=3, a1=1, b1=1.1, a2=2, c1='1', b2=2.2, hidden=404, a4=4, b3=3.3}>",
+                         repr(model))
 
         # Abstract models can still be used if necessary, but don't have the __slots__ optimization, so it's not wise
         other = MyOtherBase({'a3': 3.0})
@@ -110,10 +112,10 @@ class TestModels(TestCase):
                 yield ROLE_NONE.blacklist(override_parents=True)
 
         model = MyChildRoles({'c1': 1})
-        all_serialized = {'a1': 1, 'a2': 2, 'a3': 3, 'b1': 1.1, 'b2': 2.2, 'b3': 3.3, 'c1': '1'}
+        all_serialized = {'a1': 1, 'a_2': 2, 'a3': 3, 'b1': 1.1, 'b2': 2.2, 'b3': 3.3, 'c1': '1'}
         self.assertEqual(all_serialized, model.serialize())
-        self.assertEqual({'a2': 2, 'a3': 3}, model.serialize(role=ROLE_A))
-        self.assertEqual({'a2': 2, 'b1': 1.1, 'b2': 2.2, 'b3': 3.3, 'c1': '1'}, model.serialize(role=ROLE_B))
+        self.assertEqual({'a_2': 2, 'a3': 3}, model.serialize(role=ROLE_A))
+        self.assertEqual({'a_2': 2, 'b1': 1.1, 'b2': 2.2, 'b3': 3.3, 'c1': '1'}, model.serialize(role=ROLE_B))
         self.assertEqual({'c1': '1'}, model.serialize(role=ROLE_C))
         self.assertEqual(all_serialized, model.serialize(role=ROLE_UNKNOWN_ALL))
         self.assertEqual({}, model.serialize(role=ROLE_ALL))

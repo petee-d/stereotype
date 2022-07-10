@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Union, Set, Type, TYPE_CHECKING
+from typing import Dict, Any, Iterable, Tuple, get_args, get_origin, get_type_hints, cast, List, Union, Set, Type, TYPE_CHECKING
 
 from stereotype.fields.base import Field, AnyField
 from stereotype.fields.compound import ListField, DictField
@@ -145,17 +145,16 @@ class ModelMeta(type):
         """Any supported annotation -> any Field"""
         from stereotype.model import Model
 
-        typing_repr = repr(annotation)
-        if typing_repr.startswith('typing.'):
-            if typing_repr.startswith('typing.List['):
+        if origin := get_origin(annotation):
+            if origin is list:
                 return mcs._analyze_annotation_list(annotation)
-            if typing_repr.startswith('typing.Dict['):
+            if origin is dict:
                 return mcs._analyze_annotation_dict(annotation)
-            if typing_repr.startswith('typing.Union['):
+            if origin is Union:
                 return mcs._analyze_annotation_union(annotation)
-            if typing_repr == 'typing.Any':
-                return AnyField()
         else:
+            if annotation is Any:
+                return AnyField()
             if annotation in (bool, int, float, str):
                 return mcs._analyze_annotation_atomic(annotation)
             if issubclass(annotation, Model):
@@ -182,7 +181,7 @@ class ModelMeta(type):
         """Optional or Union -> any Field with allow_none or DynamicModelField"""
         from stereotype.model import Model
 
-        options = annotation.__args__
+        options = get_args(annotation)
         non_none = [option for option in options if option not in (type(None),)]
 
         if len(non_none) < len(options):
@@ -232,7 +231,7 @@ class ModelMeta(type):
     def _analyze_annotation_list(mcs, annotation) -> Field:
         """List[...] -> ListField"""
         field = ListField()
-        item_annotation, = annotation.__args__
+        item_annotation, = get_args(annotation)
         field.item_field = mcs._analyze_annotation(item_annotation)
         return field
 
@@ -240,7 +239,7 @@ class ModelMeta(type):
     def _analyze_annotation_dict(mcs, annotation) -> Field:
         """Dict[..., ....] -> DictField"""
         field = DictField()
-        key_annotation, value_annotation = annotation.__args__
+        key_annotation, value_annotation = get_args(annotation)
         field.key_field = mcs._analyze_annotation(key_annotation)
         if not field.key_field.atomic:
             raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {annotation}')

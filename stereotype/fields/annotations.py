@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, TYPE_CHECKING, Union
+from typing import Any, Optional, TYPE_CHECKING, Union, get_origin, get_args
 
 from stereotype.utils import ConfigurationError
 
@@ -8,21 +8,20 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class AnnotationResolver:
-    __slots__ = ['annotation', 'repr', 'optional']
+    __slots__ = ['annotation', 'origin', 'optional']
 
     def __init__(self, annotation: Any):
         """Create helper capable of resolving annotations to Fields, automatically unwrap Optional."""
         self.annotation = annotation
-        self.repr = self._make_repr()
+        self.origin = get_origin(annotation)
         self.optional = False
         self._unwrap_optional()
 
     def _unwrap_optional(self):
-        # Python 3.8 will represent Optional as Union, Python 3.9+ as Optional, which is just a Union alias
-        if not(self.repr.startswith('typing.Union[') or self.repr.startswith('typing.Optional[')):
-            return  # Cannot be Optional
+        if self.origin is not Union:
+            return
 
-        options = self.annotation.__args__
+        options = get_args(self.annotation)
         non_none = [option for option in options if option not in (type(None),)]
         if len(non_none) == len(options):
             return  # A Union of non-optional types
@@ -33,9 +32,9 @@ class AnnotationResolver:
         else:
             # There are more elements in the Union, remove None from it
             self.annotation = Union[tuple(non_none)]
-        self.repr = self._make_repr()
+        self.origin = get_origin(self.annotation)
 
-    def _make_repr(self):
+    def __repr__(self):
         return self.annotation.__name__ if hasattr(self.annotation, '__name__') else repr(self.annotation)
 
     def resolve(self, explict_field: Optional[Field] = None) -> Field:
@@ -52,15 +51,15 @@ class AnnotationResolver:
         from stereotype import Model, ListField, DictField, ModelField, DynamicModelField, AnyField
         from stereotype.fields.atomic import ATOMIC_TYPE_MAPPING
 
-        if self.repr.startswith('typing.'):
-            if self.repr.startswith('typing.List['):
+        if self.origin is not None:
+            if self.origin is list:
                 return ListField()
-            if self.repr.startswith('typing.Dict['):
+            if self.origin is dict:
                 return DictField()
-            if self.repr.startswith('typing.Union['):
+            if self.origin is Union:
                 return DynamicModelField()  # Cannot be Optional at this point, taken care of in init
-            if self.repr == 'typing.Any':
-                return AnyField()
+        elif self.annotation is Any:
+            return AnyField()
 
         elif atomic_field := ATOMIC_TYPE_MAPPING.get(self.annotation):
             return atomic_field()
@@ -68,7 +67,7 @@ class AnnotationResolver:
         elif issubclass(self.annotation, Model):
             return ModelField()
 
-        raise ConfigurationError(f'Unrecognized field annotation {self.repr} (may need an explicit Field)')
+        raise ConfigurationError(f'Unrecognized field annotation {self!r} (may need an explicit Field)')
 
     def incorrect_type(self, field: Field) -> ConfigurationError:
         hint = ''
@@ -76,4 +75,4 @@ class AnnotationResolver:
             hint = f', should use {type(self.auto_resolve()).__name__}'
         except ConfigurationError:
             pass
-        return ConfigurationError(f'{type(field).__name__} cannot be used for annotation {self.repr}{hint}')
+        return ConfigurationError(f'{type(field).__name__} cannot be used for annotation {self!r}{hint}')

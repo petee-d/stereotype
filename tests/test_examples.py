@@ -13,3 +13,7 @@ class TestExamples(TestCase):
     def test_model_fields(self):
         from examples.model_fields import Conjunction
         Conjunction()
+
+    def test_schematics_field(self):
+        from examples.schematics_field import Branch
+        Branch()

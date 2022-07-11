@@ -2,29 +2,32 @@ from __future__ import annotations
 
 from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast
 
+from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.model import Model
-from stereotype.utils import Missing
+from stereotype.roles import Role, DEFAULT_ROLE
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType
 
 
 class ModelField(Field):
     __slots__ = Field.__slots__ + ('type',)
     atomic = False
+    empty_value = {}
 
-    def __init__(self, *, default: Any = Missing, hide_none: bool = False,
+    def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
-        super().__init__(default=default, hide_none=hide_none,
+        super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
-
         self.type: Type[Model] = cast(Type[Model], NotImplemented)
         self.native_validate = self.validate
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from value.validation_errors(context)
+    def init_from_annotation(self, parser: AnnotationResolver):
+        if not issubclass(parser.annotation, Model):
+            raise parser.incorrect_type(self)
+        self.type = parser.annotation
 
-    def type_config_from(self, field: ModelField):
-        super().type_config_from(field)
-        self.type = field.type
+    def validate(self, value: Model, context: ValidationContextType) -> Iterable[PathErrorType]:
+        yield from value.validation_errors(context)
 
     def convert(self, value: Any) -> Any:
         if value is Missing:
@@ -33,10 +36,10 @@ class ModelField(Field):
             return self.default if self.default_factory is None else self.default_factory()
         if value is None:
             return None
-        if isinstance(value, Model):
-            if not isinstance(value, self.type):
-                raise TypeError(f'Supplied type {type(value).__name__}, needs a mapping or {self.type.__name__}')
+        if isinstance(value, self.type):
             return value
+        if not isinstance(value, dict):
+            raise TypeError(f'Supplied type {type(value).__name__}, needs a mapping or {self.type.__name__}')
         return self.type(value)
 
     def copy_value(self, value: Any) -> Any:
@@ -44,10 +47,10 @@ class ModelField(Field):
             return value
         return value.copy(deep=True)
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         if value is None or value is Missing:
             return value
-        return value.to_primitive()
+        return value.to_primitive(role)
 
     @property
     def type_repr(self):
@@ -63,18 +66,40 @@ class DynamicModelField(Field):
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
         super().__init__(default=default, hide_none=hide_none,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
-
         self.types: Tuple[Type[Model], ...] = NotImplemented
         self.type_map: Dict[str, Type[Model]] = NotImplemented
         self.native_validate = self.validate
 
-    def validate(self, value: Any, context: dict) -> Iterable[Tuple[Tuple[str, ...], str]]:
-        yield from value.validation_errors(context)
+    def init_from_annotation(self, parser: AnnotationResolver):
+        if not parser.repr.startswith('typing.Union['):
+            raise parser.incorrect_type(self)
+        options = parser.annotation.__args__
 
-    def type_config_from(self, field: DynamicModelField):
-        super().type_config_from(field)
-        self.types = field.types
-        self.type_map = field.type_map
+        if not all(issubclass(option, Model) for option in options):
+            raise ConfigurationError(f'Union Model fields can only be Optional or Union of Model subclass types, '
+                                     f'got {parser.repr}')
+
+        type_map = {}
+        for option in options:
+            if not hasattr(option, 'type'):
+                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser.repr} but "
+                                         f"does not define a non-type-annotated string `type` field")
+            if type(option.type).__name__ == 'member_descriptor':
+                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser.repr} but its "
+                                         f"`type` field has a type annotation making it a field, must be an attribute")
+            if not isinstance(option.type, str):
+                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser.repr} but its "
+                                         f"`type` field {option.type} is not a string")
+            if option.type in type_map:
+                raise ConfigurationError(f"Conflicting dynamic model field types in {parser.repr}: "
+                                         f"{type_map[option.type].__name__} vs {option.__name__}")
+            type_map[option.type] = option
+
+        self.type_map = type_map
+        self.types = tuple(type_map.values())
+
+    def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
+        yield from value.validation_errors(context)
 
     def convert(self, value: Any) -> Any:
         if value is Missing:
@@ -103,10 +128,10 @@ class DynamicModelField(Field):
             return value
         return value.copy(deep=True)
 
-    def to_primitive(self, value: Any) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
         if value is None or value is Missing:
             return value
-        result = value.to_primitive()
+        result = value.to_primitive(role)
         result['type'] = value.type
         return result
 

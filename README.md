@@ -27,6 +27,7 @@ has 100% test coverage.
 - Some built-in validation helpers for most fields
 - Custom validation instance methods with context
 - Serialization roles using field blacklists or whitelists, with inheritance or overriding
+- Schematics compatibility field
 
 
 # Tutorial
@@ -34,7 +35,7 @@ has 100% test coverage.
 ## Atomic value fields
 
 Here is a simple flat model defined using stereotype:
-```
+```python
 from typing import Optional
 
 from stereotype import Model, FloatField, ValidationError, Missing
@@ -69,7 +70,7 @@ class Employee(Model):
     validation rules.
 
 Model instances are created by passing dictionaries. Models can then be validated and serialized back to raw data:
-```
+```python
 model = Employee({'name': 'Jane Doe', 'female': True, 'salary': 150000})
 model.validate()
 assert model.name == 'Jane Doe'
@@ -91,7 +92,7 @@ assert primitive == {'name': 'Jane Doe', 'department': 'Engineering', 'female': 
 
 Validation errors raised from the `validate` method can report common data issues, such as missing required fields
     and broken validation rules:
-```
+```python
 model = Employee({'department': None, 'salary': '10'})
 try:
     model.validate()
@@ -120,7 +121,7 @@ assert model.to_primitive() == {'department': None, 'female': None, 'salary': 10
 
 Conversion errors are raised during model initialization if the input to a model wasn't a dictionary or any of
     the fields contain data that cannot be interpreted by the corresponding field.
-```
+```python
 try:
     model = Employee({'name': 'Alien', 'female': 'Unknown'})
 except ConversionError as e:
@@ -131,7 +132,7 @@ except ConversionError as e:
 ## Compound value fields
 
 Fields can also be lists and dictionaries of other fields:
-```
+```python
 from typing import List, Dict
 
 from stereotype import Model, ListField, StrField, FloatField, ValidationError
@@ -164,7 +165,7 @@ assert model.to_primitive() == {
 * Extra options can again be specified with an explicit `DictField`, such as validation rules for the keys and values.
 * You can use the `list` and `dict` constructors as defaults if the fields are not required.
 
-```
+```python
 model = Book({
     'name': "The Hitchhiker's Guide to the Galaxy",
     'authors': ['Douglas Adams', None],
@@ -186,7 +187,7 @@ except ValidationError as e:
 ## Deeper structures with model fields
 
 Models can be used as model fields themselves.
-```
+```python
 from __future__ import annotations
 from typing import Optional, Any, Union, List
 from stereotype import Model
@@ -219,7 +220,7 @@ assert equality.to_primitive() == {'variable': {'name': 'x'}, 'constant': {'valu
 * Note `IsEqual.type` doesn't have a type annotation, hence isn't a field and won't be present in serialized data.
 
 The non-field string `type` attribute has a special usage when using dynamic model fields:
-```
+```python
 class Negation(Model):
     type = 'not'
 

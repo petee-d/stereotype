@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Union, Set, Type, TYPE_CHECKING
+from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Set, Type, TYPE_CHECKING, Optional
 
-from stereotype.fields.base import Field, AnyField
-from stereotype.fields.compound import ListField, DictField
+from stereotype.fields.annotations import AnnotationResolver
+from stereotype.fields.base import Field
 from stereotype.fields.serializable import SerializableField
 from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields
-from stereotype.utils import ConfigurationError
+from stereotype.utils import ConfigurationError, Missing
 
 if TYPE_CHECKING:  # pragma: no cover
     from stereotype.model import Model
@@ -90,22 +90,23 @@ class ModelMeta(type):
     @classmethod
     def _analyze_fields(mcs, cls: Type[Model], field_values: dict) -> Iterable[Field]:
         for name, annotation in mcs._iterate_fields(mcs._resolve_annotations(cls)):
-            analyzed_field = mcs._analyze_annotation(annotation)
-            value = field_values.get(name)
-            if isinstance(value, Field):
-                field = value.copy_field()
-                if not isinstance(field, type(analyzed_field)):
-                    field.fill_in_name(name)
-                    analyzed_field.fill_in_name(name)
-                    raise ConfigurationError(f'Annotations for {analyzed_field} require custom field type '
-                                             f'{type(analyzed_field).__name__}, got {type(field).__name__}')
-                field.type_config_from(analyzed_field)
-            else:
-                field = analyzed_field
-                if name in field_values:
-                    field.set_default(value)
+            explicit_field: Optional[Field] = None
+            default = Missing
+            if name in field_values:
+                value = field_values[name]
+                if isinstance(value, Field):
+                    explicit_field = value
+                else:
+                    default = value
 
-            field.fill_in_name(name)
+            try:
+                field = AnnotationResolver(annotation).resolve(explict_field=explicit_field)
+            except ConfigurationError as e:
+                raise ConfigurationError(f'Field {name}: {e}')
+            field.init_name(name)
+            if default is not Missing:
+                field.init_default(default)
+            # Note a default could have also been present in the explicit field
             field.check_default()
 
             validator_method = getattr(cls, f'validate_{name}', None)
@@ -127,7 +128,7 @@ class ModelMeta(type):
     def _analyze_serializable(mcs, cls: Type[Model]):
         attrs = {name: getattr(cls, name) for name in dir(cls)}
         for name, field in mcs._iterate_serializable(attrs):
-            field.fill_in_name(name)
+            field.init_name(name)
             yield field
 
     @staticmethod
@@ -139,113 +140,6 @@ class ModelMeta(type):
         except NameError as e:
             raise ConfigurationError(f'Model {cls.__name__} annotation {str(e)}. If not a global symbol or cannot be '
                                      f'imported globally, use the class method `resolve_extra_types` to provide it.')
-
-    @classmethod
-    def _analyze_annotation(mcs, annotation) -> Field:
-        """Any supported annotation -> any Field"""
-        from stereotype.model import Model
-
-        typing_repr = repr(annotation)
-        if typing_repr.startswith('typing.'):
-            if typing_repr.startswith('typing.List['):
-                return mcs._analyze_annotation_list(annotation)
-            if typing_repr.startswith('typing.Dict['):
-                return mcs._analyze_annotation_dict(annotation)
-            if typing_repr.startswith('typing.Union['):
-                return mcs._analyze_annotation_union(annotation)
-            if typing_repr == 'typing.Any':
-                return AnyField()
-        else:
-            if annotation in (bool, int, float, str):
-                return mcs._analyze_annotation_atomic(annotation)
-            if issubclass(annotation, Model):
-                return mcs._analyze_annotation_model(annotation)
-
-        raise ConfigurationError(f'Unsupported Model field {annotation!r}')
-
-    @classmethod
-    def _analyze_annotation_atomic(mcs, annotation) -> Field:
-        """Atomic types -> atomic Field"""
-        from stereotype.fields.atomic import ATOMIC_TYPE_MAPPING
-        return ATOMIC_TYPE_MAPPING[annotation]()
-
-    @classmethod
-    def _analyze_annotation_model(mcs, annotation) -> Field:
-        """Model subclass -> ModelField"""
-        from stereotype import ModelField
-        field = ModelField()
-        field.type = annotation
-        return field
-
-    @classmethod
-    def _analyze_annotation_union(mcs, annotation) -> Field:
-        """Optional or Union -> any Field with allow_none or DynamicModelField"""
-        from stereotype.model import Model
-
-        options = annotation.__args__
-        non_none = [option for option in options if option not in (type(None),)]
-
-        if len(non_none) < len(options):
-            # Optional is always represented by Union[None, ...]
-            return mcs._analyze_annotation_optional(non_none)
-        elif all(issubclass(option, Model) for option in options):
-            return mcs._analyze_annotation_model_union(annotation, options)
-        else:
-            raise ConfigurationError(f'Union Model fields can only be Optional or Union of Model subclass types, '
-                                     f'got {annotation!r}')
-
-    @classmethod
-    def _analyze_annotation_optional(mcs, non_none: List[Any]) -> Field:
-        """Optional[...] -> any Field with allow_none"""
-        optional_type = non_none[0] if len(non_none) == 1 else Union[tuple(non_none)]
-        field = mcs._analyze_annotation(optional_type)
-        field.allow_none = True
-        return field
-
-    @classmethod
-    def _analyze_annotation_model_union(mcs, annotation, options: List[Any]) -> Field:
-        """Union[ModelSubClass, ...] -> DynamicModelField"""
-        from stereotype import DynamicModelField
-
-        type_map = {}
-        for option in options:
-            if not hasattr(option, 'type'):
-                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {annotation} but does "
-                                         f"not define a non-type-annotated string `type` field")
-            if type(option.type).__name__ == 'member_descriptor':
-                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {annotation} but it's "
-                                         f"`type` field has a type annotation making it a field, must be an attribute")
-            if not isinstance(option.type, str):
-                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {annotation} but it's "
-                                         f"`type` field {option.type} is not a string")
-            if option.type in type_map:
-                raise ConfigurationError(f"Conflicting dynamic model field types in {annotation}: "
-                                         f"{type_map[option.type].__name__} vs {option.__name__}")
-            type_map[option.type] = option
-
-        field = DynamicModelField()
-        field.type_map = type_map
-        field.types = tuple(type_map.values())
-        return field
-
-    @classmethod
-    def _analyze_annotation_list(mcs, annotation) -> Field:
-        """List[...] -> ListField"""
-        field = ListField()
-        item_annotation, = annotation.__args__
-        field.item_field = mcs._analyze_annotation(item_annotation)
-        return field
-
-    @classmethod
-    def _analyze_annotation_dict(mcs, annotation) -> Field:
-        """Dict[..., ....] -> DictField"""
-        field = DictField()
-        key_annotation, value_annotation = annotation.__args__
-        field.key_field = mcs._analyze_annotation(key_annotation)
-        if not field.key_field.atomic:
-            raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {annotation}')
-        field.value_field = mcs._analyze_annotation(value_annotation)
-        return field
 
     @classmethod
     def _build_roles(mcs, cls: Type[Model], bases: List[Type[Model]], own_field_names: Set[str]):

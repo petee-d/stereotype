@@ -1,4 +1,5 @@
 from .fields.atomic import BoolField, IntField, FloatField, StrField  # noqa
+from .fields.base import AnyField  # noqa
 from .fields.compound import ListField, DictField  # noqa
 from .fields.model import ModelField, DynamicModelField  # noqa
 from .fields.serializable import serializable  # noqa

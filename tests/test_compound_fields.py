@@ -4,7 +4,7 @@ from typing import Optional, Union, List, Dict, cast, Iterable
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, ConfigurationError, ListField, \
-    StrField, BoolField
+    StrField, BoolField, FloatField
 from stereotype.fields.compound import DictField
 from stereotype.roles import RequestedRoleFields, Role
 
@@ -30,6 +30,10 @@ class SomeLists(Model):
     lists: List[List[float]] = list
     models: Optional[List[MyBoolModel]] = None
     dynamics: List[Union[MyBoolModel, MyStrModel]] = ListField(primitive_name='union')
+
+
+class SimpleInt(Model):
+    int: int
 
 
 class TestListType(TestCase):
@@ -148,6 +152,35 @@ class TestListType(TestCase):
         self.assertEqual({}, model.to_primitive(my_role))
         self.assertEqual({'custom': [{'field': 'abc'}]}, model.to_primitive())
 
+    def test_nested_conversion_errors(self):
+        class Collections(Model):
+            models: List[SimpleInt]
+            ints: List[int]
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'models': [{'int': 1}, {'int': 'nan'}, {'int': 'bad'}]})
+        self.assertEqual({'models': {'1': {'int': ["Value 'nan' is not an integer number"]}}}, ctx.exception.errors)
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'ints': ['bad', 'worse']})
+        self.assertEqual({'ints': {'0': ["Value 'bad' is not an integer number"]}}, ctx.exception.errors)
+
+    def test_configuration_error_not_list(self):
+        class Bad(Model):
+            mismatch: Dict[str, MyStrModel] = ListField(item_field=ModelField())
+        with self.assertRaises(ConfigurationError) as ctx:
+            Bad()
+        self.assertEqual('Field mismatch: ListField cannot be used for annotation typing.Dict[str, '
+                         'tests.test_compound_fields.MyStrModel], should use DictField', str(ctx.exception))
+
+    def test_configuration_error_list_item_mismatch(self):
+        class Bad(Model):
+            worse: List[Optional[bool]] = ListField(item_field=StrField(hide_none=True))
+        with self.assertRaises(ConfigurationError) as ctx:
+            Bad()
+        self.assertEqual('Field worse: StrField cannot be used for annotation bool, should use BoolField',
+                         str(ctx.exception))
+
 
 class MyDicts(Model):
     int_to_int: Dict[int, int]
@@ -213,14 +246,14 @@ class TestDictType(TestCase):
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'int_to_int': ['Numeric value 4.2 is not an integer'],
+            'int_to_int': {'4.2': ['Numeric value 4.2 is not an integer']},
         }, ctx.exception.errors)
 
         data['int_to_int'] = {1: 2, 4: 4.7}
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'int_to_int': ['Numeric value 4.7 is not an integer'],
+            'int_to_int': {'4': ['Numeric value 4.7 is not an integer']},
         }, ctx.exception.errors)
 
         data['int_to_int'][4] = 7
@@ -234,18 +267,31 @@ class TestDictType(TestCase):
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'bool_to_model': ['Value must be a boolean or a true/false/yes/no string value'],
+            'bool_to_model': {'1': ['Value must be a boolean or a true/false/yes/no string value']},
         }, ctx.exception.errors)
 
         data['bool_to_model'] = {True: None}
         with self.assertRaises(ConversionError) as ctx:
             MyDicts(data)
         self.assertEqual({
-            'str_to_opt_dict': ['Expected a dict, got a int'],
+            'str_to_opt_dict': {'4': ['Expected a dict, got a int']},
         }, ctx.exception.errors)
 
         data['str_to_opt_dict'][4] = None
         MyDicts(data)
+
+    def test_nested_conversion_errors(self):
+        class Collections(Model):
+            models: Dict[str, SimpleInt]
+            ints: Dict[str, int]
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'models': {'x': {'int': 'bad'}, 'y': {'int': 2}, '3': {'int': 'y'}}})
+        self.assertEqual({'models': {'x': {'int': ["Value 'bad' is not an integer number"]}}}, ctx.exception.errors)
+
+        with self.assertRaises(ConversionError) as ctx:
+            Collections({'ints': {'x': 1, 'y': '2+3', 'z': 'y'}})
+        self.assertEqual({'ints': {'y': ["Value '2+3' is not an integer number"]}}, ctx.exception.errors)
 
     def test_inner_validation(self):
         data = {
@@ -287,18 +333,34 @@ class TestDictType(TestCase):
             RequiredDict({'dict': {None: None}}).validate()
         self.assertEqual('dict: None: This field is required', str(ctx.exception))
 
-    def test_configuration_error(self):
-        class BadKey(Model):
+    def test_configuration_error_not_dict(self):
+        class Bad(Model):
+            mismatch: List[MyStrModel] = DictField(key_field=BoolField(), value_field=ModelField())
+        with self.assertRaises(ConfigurationError) as ctx:
+            Bad()
+        self.assertEqual('Field mismatch: DictField cannot be used for annotation '
+                         'typing.List[tests.test_compound_fields.MyStrModel], should use ListField', str(ctx.exception))
+
+    def test_configuration_error_invalid_key(self):
+        class InvalidKey(Model):
             bad: Dict[MyStrModel, bool]
-
         with self.assertRaises(ConfigurationError) as ctx:
-            BadKey()
-        self.assertEqual('DictField keys may only be booleans, numbers or strings: '
+            InvalidKey()
+        self.assertEqual('Field bad: DictField keys may only be booleans, numbers or strings: '
                          'typing.Dict[tests.test_compound_fields.MyStrModel, bool]', str(ctx.exception))
-        with self.assertRaises(ConfigurationError) as ctx:
-            class BadField(Model):
-                bad: Dict[MyStrModel, bool] = DictField(ModelField())
 
-            BadField()
-        self.assertEqual('DictField keys may only be booleans, numbers or strings: '
-                         'typing.Dict[tests.test_compound_fields.MyStrModel, bool]', str(ctx.exception))
+    def test_configuration_error_dict_key_mismatch(self):
+        class Bad(Model):
+            bad: Dict[int, bool] = DictField(key_field=FloatField())
+        with self.assertRaises(ConfigurationError) as ctx:
+            Bad()
+        self.assertEqual('Field bad: FloatField cannot be used for annotation int, should use IntField',
+                         str(ctx.exception))
+
+    def test_configuration_error_dict_value_mismatch(self):
+        class Bad(Model):
+            worse: Dict[int, bool] = DictField(value_field=ModelField())
+        with self.assertRaises(ConfigurationError) as ctx:
+            Bad()
+        self.assertEqual('Field worse: ModelField cannot be used for annotation bool, should use BoolField',
+                         str(ctx.exception))

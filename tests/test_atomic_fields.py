@@ -238,8 +238,8 @@ class TestFloatField(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Mismatch({'my_name': 5})
-        self.assertEqual('Annotations for <Field my_name of type int, required> require custom field type IntField, '
-                         'got FloatField', str(ctx.exception))
+        self.assertEqual("Field my_name: FloatField cannot be used for annotation int, should use IntField",
+                         str(ctx.exception))
 
     def test_hidden_figures(self):
         class Hidden(Model):

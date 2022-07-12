@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Iterable
+from typing import Any, Optional, Iterable, get_args
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field, ValidationContextType
@@ -53,9 +53,9 @@ class ListField(_CompoundField):
         self.native_validate = self.validate
 
     def init_from_annotation(self, parser: AnnotationResolver):
-        if not parser.repr.startswith('typing.List['):
+        if parser.origin is not list:
             raise parser.incorrect_type(self)
-        item_annotation, = parser.annotation.__args__
+        item_annotation, = get_args(parser.annotation)
         self.item_field = AnnotationResolver(item_annotation).resolve(self.item_field)
 
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
@@ -123,12 +123,12 @@ class DictField(_CompoundField):
         self.native_validate = self.validate
 
     def init_from_annotation(self, parser: AnnotationResolver):
-        if not parser.repr.startswith('typing.Dict['):
+        if parser.origin is not dict:
             raise parser.incorrect_type(self)
-        key_annotation, value_annotation = parser.annotation.__args__
+        key_annotation, value_annotation = get_args(parser.annotation)
         self.key_field = AnnotationResolver(key_annotation).resolve(self.key_field)
         if not self.key_field.atomic:
-            raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {parser.repr}')
+            raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {parser!r}')
         self.value_field = AnnotationResolver(value_annotation).resolve(self.value_field)
 
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:

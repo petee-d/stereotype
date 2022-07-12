@@ -145,7 +145,7 @@ class AnyField(Field):
         self.deep_copy = deep_copy
 
     def init_from_annotation(self, parser: AnnotationResolver):
-        if parser.repr != 'typing.Any':
+        if parser.annotation is not Any:
             raise parser.incorrect_type(self)
 
     def convert(self, value: Any) -> Any:

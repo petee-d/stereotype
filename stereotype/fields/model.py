@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast
+from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast, Union, get_args
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
@@ -71,27 +71,27 @@ class DynamicModelField(Field):
         self.native_validate = self.validate
 
     def init_from_annotation(self, parser: AnnotationResolver):
-        if not parser.repr.startswith('typing.Union['):
+        if parser.origin is not Union:
             raise parser.incorrect_type(self)
-        options = parser.annotation.__args__
+        options = get_args(parser.annotation)
 
         if not all(issubclass(option, Model) for option in options):
             raise ConfigurationError(f'Union Model fields can only be Optional or Union of Model subclass types, '
-                                     f'got {parser.repr}')
+                                     f'got {parser!r}')
 
         type_map = {}
         for option in options:
             if not hasattr(option, 'type'):
-                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser.repr} but "
+                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser!r} but "
                                          f"does not define a non-type-annotated string `type` field")
             if type(option.type).__name__ == 'member_descriptor':
-                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser.repr} but its "
+                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser!r} but its "
                                          f"`type` field has a type annotation making it a field, must be an attribute")
             if not isinstance(option.type, str):
-                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser.repr} but its "
+                raise ConfigurationError(f"Model {option.__name__} used in a dynamic model field {parser!r} but its "
                                          f"`type` field {option.type} is not a string")
             if option.type in type_map:
-                raise ConfigurationError(f"Conflicting dynamic model field types in {parser.repr}: "
+                raise ConfigurationError(f"Conflicting dynamic model field types in {parser!r}: "
                                          f"{type_map[option.type].__name__} vs {option.__name__}")
             type_map[option.type] = option
 

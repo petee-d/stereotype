@@ -18,6 +18,10 @@ class Model(metaclass=ModelMeta):
     __roles__: List[FinalizedRoleFields]
 
     def __init__(self, raw_data: Optional[dict] = None):
+        """
+        Constructs an instance of this Model from input data, a dictionary.
+        Does not perform validation, but the conversion may raise a ConversionError for a single field with a bad value.
+        """
         if self.__input_fields__ is NotImplemented:
             self.__initialize_model__()
         if raw_data is None:
@@ -38,6 +42,7 @@ class Model(metaclass=ModelMeta):
                 raise ConversionError.new(str(e), primitive_name)
 
     def to_primitive(self, role: Role = DEFAULT_ROLE):
+        """Creates raw data from this Model. The role can be used together with declare_roles to exclude fields."""
         if role.code < len(self.__role_fields__):
             fields = self.__role_fields__[role.code]
         elif role.empty_by_default:
@@ -63,14 +68,27 @@ class Model(metaclass=ModelMeta):
         return result
 
     def serialize(self, role: Role = DEFAULT_ROLE):
+        """Creates raw data from this Model. The role can be used together with declare_roles to exclude fields."""
         return self.to_primitive(role)
 
     def validate(self, context=None):
+        """
+        Validates data, raising a ValidationError with potentially multiple error messages, mapped by field paths.
+        Validation catches: fields without defaults missing in data, None in non-Optional fields and failing validators
+          - whether native Field validation options or custom validate_* methods.
+        :param context: Optional value obscure to stereotype, passed to any custom validation methods (validate_*).
+        """
         errors = list(self.validation_errors(context))
         if errors:
             raise ValidationError(errors)
 
     def validation_errors(self, context=None) -> Iterable[PathErrorType]:
+        """
+        Validates data, yielding errors one by one, each with a field path.
+        Validation catches: fields without defaults missing in data, None in non-Optional fields and failing validators
+          - whether native Field validation options or custom validate_* methods.
+        :param context: Optional value obscure to stereotype, passed to any custom validation methods (validate_*).
+        """
         for name, primitive_name, allow_none, native_validate, validator_method in self.__validated_fields__:
             value = getattr(self, name)
             if value is Missing or (value is None and not allow_none):
@@ -87,6 +105,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def declare_roles(cls) -> Iterable[RequestedRoleFields]:
+        """
+        Allows specifying whether a field is serialized for a particular role.
+        Define roles globally, like:    MY_ROLE = Role('my')
+        Then in this class method:      yield MY_ROLE.blacklist(cls.my_field)
+        """
         yield from ()
 
     @classmethod
@@ -133,13 +156,15 @@ class Model(metaclass=ModelMeta):
         return f'<{self.__class__.__name__} {{' + ', '.join(parts) + '}>'
 
     def items(self) -> Iterable[Tuple[str, Any]]:
+        """Provides an iterator over the fields of this model, with field name and converted value pairs."""
         for name, primitive_name, convert, copy_value in self.__input_fields__:
             value = getattr(self, name)
             if value is Missing:
-                continue
+                continue  # Missing required fields are skipped intentionally
             yield name, value
 
     def copy(self, deep: bool = False) -> Model:
+        """Creates an optionally deep copy of this model."""
         copied = self.__new__(self.__class__)
         for name, primitive_name, convert, copy_value in self.__input_fields__:
             value = getattr(self, name)
@@ -150,6 +175,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
+        """Lists the field names (using primitive names, as in serialized data) present for a given role."""
         if cls.__role_fields__ is NotImplemented:
             cls.__initialize_model__()
         if role.code < len(cls.__role_fields__):

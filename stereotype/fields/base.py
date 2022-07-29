@@ -23,8 +23,12 @@ class Field:
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
         """
-        :param default: default value (including None) if not present in primitive data, required if omitted
-        :param primitive_name: alternative field name for primitive data
+        Abstract base class for other field types. Use AnyField if type shouldn't be checked.
+        :param default: Means the field isn't required, used as default directly or called if callable
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param hide_empty: If the field's value is empty_value (varies by field type), it will be hidden
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
         """
         # All NotImplemented *must* be updated later based on annotations
         self.name: str = NotImplemented
@@ -140,6 +144,14 @@ class AnyField(Field):
 
     def __init__(self, *, deep_copy: bool = False, default: Any = Missing, hide_none: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
+        """
+        Value of any type (annotation typing.Any).
+        :param deep_copy: If true, conversion, serialization and copying will use copy.deepcopy for this value
+        :param default: Means the field isn't required, used as default directly or called if callable
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        """
         super().__init__(default=default, hide_none=hide_none,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
         self.deep_copy = deep_copy

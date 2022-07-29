@@ -46,6 +46,17 @@ class ListField(_CompoundField):
                  default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None):
+        """
+        List value (annotation typing.List), accepting lists of the inner type.
+        :param item_field: Optionally allows specifying further options for the type of the list's items
+        :param default: Means the field isn't required, should be None, [] or a callable, for example `list`
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param hide_empty: If the list is empty, it will be hidden from serialized output
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param min_length: Validation enforces the list has a minimum number of items (1 => non-empty)
+        :param max_length: Validation enforces the list has a maximum number of items
+        """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name,
                          min_length=min_length, max_length=max_length)
@@ -120,6 +131,18 @@ class DictField(_CompoundField):
                  default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None):
+        """
+        Dict value (annotation typing.Dict), accepting dicts with applicable keys and values.
+        :param key_field: Optionally allows specifying further options for the type of the dict's keys
+        :param value_field: Optionally allows specifying further options for the type of the dict's values
+        :param default: Means the field isn't required, should be None, {} or a callable, for example `dict`
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param hide_empty: If the dict is empty, it will be hidden from serialized output
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param min_length: Validation enforces the dict has a minimum number of items (1 => non-empty)
+        :param max_length: Validation enforces the dict has a maximum number of items
+        """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name,
                          min_length=min_length, max_length=max_length)

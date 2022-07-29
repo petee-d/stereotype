@@ -90,11 +90,21 @@ class TestBooleanField(TestCase):
         self.assertEqual('Value `42` used as field default must be of type bool', str(ctx.exception))
 
 
+def is_even(value, context):
+    if value % 2 == 1:
+        raise ValueError(f"Must be an even {context or 'number'}")
+
+
 class IntModel(Model):
     normal: int = IntField(default=42, primitive_name='norm')
     min: int = IntField(min_value=3)
     max: Optional[int] = IntField(max_value=int(2e10))
     min_max: int = IntField(min_value=5, max_value=10, default=lambda: 8)
+    even: int = IntField(default=0, hide_zero=True, validators=[is_even])
+
+    def validate_even(self, value, context):
+        if self.max is not None and value > self.max:
+            raise ValueError(f"Even an even {context or 'number'} cannot be above max")
 
 
 class TestIntField(TestCase):
@@ -105,6 +115,7 @@ class TestIntField(TestCase):
         self.assertEqual(int(3e10), model.max)
         self.assertEqual(17, model.min_max)
         self.assertEqual(17, model['min_max'])
+        self.assertEqual(0, model['even'])
         with self.assertRaises(KeyError) as ctx:
             self.failIf(model['serialize'])
         self.assertEqual("'serialize'", str(ctx.exception))
@@ -118,6 +129,21 @@ class TestIntField(TestCase):
         self.assertEqual({'norm': -5, 'min': 2, 'max': 30000000000, 'min_max': 17}, model.serialize())
 
         self.assertEqual('<Field normal of type int, default=<42>, primitive name norm>', repr(IntModel.__fields__[0]))
+
+    def test_custom_validators(self):
+        model = IntModel({'min': 5, 'max': 5})
+        model.validate()
+        model.even = 7
+        with self.assertRaises(ValidationError) as ctx:
+            model.validate()
+        self.assertEqual({
+            'even': ['Even an even number cannot be above max', 'Must be an even number'],
+        }, ctx.exception.errors)
+        with self.assertRaises(ValidationError) as ctx:
+            model.validate("integer")
+        self.assertEqual({
+            'even': ['Even an even integer cannot be above max', 'Must be an even integer'],
+        }, ctx.exception.errors)
 
     def test_conversion_errors(self):
         with self.assertRaises(ConversionError) as ctx:

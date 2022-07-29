@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, List, Dict, Tuple, cast, Any
+from typing import Union, List, Dict, Tuple, cast, Any, Callable
 
 
 class _MissingType:
@@ -22,8 +22,15 @@ class ConfigurationError(StereotypeError, AssertionError):
     pass
 
 
-ValidationContextType = Any  # This serves purely as internal documentation, making types easier to read
+# The validation context is an obscure value pass along to custom Field validators and validate_* methods on Models.
+# The type alias serves purely as internal documentation, making types easier to read.
+ValidationContextType = Any
+
+# An error message (second element) with a path of primitive field names leading to the bad data.
 PathErrorType = Tuple[Tuple[str, ...], str]
+
+# Receives the validated value as the only argument, raises ValueError if invalid.
+Validator = Callable[[Any, ValidationContextType], None]
 
 
 class DataError(StereotypeError):

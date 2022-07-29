@@ -5,7 +5,7 @@ from typing import Optional, Tuple, List, Iterable, Type, Set, Any, Callable
 from stereotype.fields.base import Field
 from stereotype.meta import ModelMeta
 from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields, DEFAULT_ROLE
-from stereotype.utils import Missing, ValidationError, ConversionError, PathErrorType, ValidationContextType
+from stereotype.utils import Missing, ValidationError, ConversionError, PathErrorType, ValidationContextType, Validator
 
 
 class Model(metaclass=ModelMeta):
@@ -86,22 +86,28 @@ class Model(metaclass=ModelMeta):
         """
         Validates data, yielding errors one by one, each with a field path.
         Validation catches: fields without defaults missing in data, None in non-Optional fields and failing validators
-          - whether native Field validation options or custom validate_* methods.
-        :param context: Optional value obscure to stereotype, passed to any custom validation methods (validate_*).
+          - whether native Field validation options, custom Field validators or custom validate_* methods.
+        :param context: Optional value obscure to stereotype, passed to Field validators and validate_* Model methods.
         """
-        for name, primitive_name, allow_none, native_validate, validator_method in self.__validated_fields__:
+        for name, input_name, allow_none, native_validate, validator_method, validators in self.__validated_fields__:
             value = getattr(self, name)
             if value is Missing or (value is None and not allow_none):
-                yield (primitive_name,), 'This field is required'
+                yield (input_name,), 'This field is required'
                 continue
             if native_validate is not None and value is not None:
                 for path, error in native_validate(value, context):
-                    yield (primitive_name,) + path, error
+                    yield (input_name,) + path, error
             if validator_method is not None:
                 try:
                     validator_method(self, value, context)
                 except ValueError as e:
-                    yield (primitive_name,), str(e)
+                    yield (input_name,), str(e)
+            if validators is not None:
+                try:
+                    for validator in validators:
+                        validator(value, context)
+                except ValueError as e:
+                    yield (input_name,), str(e)
 
     @classmethod
     def declare_roles(cls) -> Iterable[RequestedRoleFields]:
@@ -199,10 +205,11 @@ _InputFieldConfig = Tuple[
 ]
 _ValidatedFieldConfig = Tuple[
     str,  # name
-    str,  # primitive_name - used in error message, has fallback to name if primitive names are None
+    str,  # input_name - used in error message, has fallback to name if primitive names are None
     bool,  # allow_none
     Optional[_NativeValidator],  # native_validate
     Optional[_ValidatorMethod],  # validator_method
+    Optional[Tuple[Validator, ...]],  # validators
 ]
 _OutputFieldConfig = Tuple[
     str,  # name

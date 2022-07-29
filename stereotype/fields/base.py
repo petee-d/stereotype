@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Optional, Callable, Iterable, TYPE_CHECKING
+from typing import Any, Optional, Callable, Iterable, TYPE_CHECKING, List, Tuple
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.roles import DEFAULT_ROLE, Role
-from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator
 
 if TYPE_CHECKING:  # pragma: no cover
     from stereotype.model import _OutputFieldConfig, _InputFieldConfig, _ValidatedFieldConfig, _ValidatorMethod, \
@@ -14,14 +14,15 @@ if TYPE_CHECKING:  # pragma: no cover
 
 class Field:
     __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'native_validate', 'validator_method',
-                 'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable')
+                 'validators', 'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable')
     type = NotImplemented
     type_repr: str = NotImplemented
     atomic: bool = False
     empty_value = NotImplemented
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
-                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
+                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
+                 validators: Optional[List[Validator]] = None):
         """
         Abstract base class for other field types. Use AnyField if type shouldn't be checked.
         :param default: Means the field isn't required, used as default directly or called if callable
@@ -29,6 +30,7 @@ class Field:
         :param hide_empty: If the field's value is empty_value (varies by field type), it will be hidden
         :param primitive_name: Changes the key used to represent the field in serialized data - input or output
         :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
         """
         # All NotImplemented *must* be updated later based on annotations
         self.name: str = NotImplemented
@@ -40,6 +42,7 @@ class Field:
 
         self.native_validate: Optional[_NativeValidator] = None
         self.validator_method: Optional[_ValidatorMethod] = None
+        self.validators: Optional[Tuple[Validator, ...]] = tuple(validators) if validators else None
         self.serializable: Optional[_SerializableFn] = None
 
         # Only user-specifiable options are allowed as arguments to avoid user confusion
@@ -118,7 +121,7 @@ class Field:
 
     def make_validated_config(self) -> _ValidatedFieldConfig:
         return (self.name, self.primitive_name or self.to_primitive_name or self.name, self.allow_none,
-                self.native_validate, self.validator_method)
+                self.native_validate, self.validator_method, self.validators)
 
     def make_output_config(self) -> _OutputFieldConfig:
         return (self.name, self.serializable, self.to_primitive if not self.atomic else None,
@@ -143,7 +146,8 @@ class AnyField(Field):
     atomic = False
 
     def __init__(self, *, deep_copy: bool = False, default: Any = Missing, hide_none: bool = False,
-                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
+                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
+                 validators: Optional[List[Validator]] = None):
         """
         Value of any type (annotation typing.Any).
         :param deep_copy: If true, conversion, serialization and copying will use copy.deepcopy for this value
@@ -151,9 +155,10 @@ class AnyField(Field):
         :param hide_none: If the field's value is None, it will be hidden from serialized output
         :param primitive_name: Changes the key used to represent the field in serialized data - input or output
         :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
         """
         super().__init__(default=default, hide_none=hide_none,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.deep_copy = deep_copy
 
     def init_from_annotation(self, parser: AnnotationResolver):

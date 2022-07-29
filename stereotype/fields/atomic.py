@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Union, Any, Iterable, Optional
+from typing import Union, Any, Iterable, Optional, List
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
-from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator
 
 
 class _AtomicField(Field):
@@ -22,7 +22,8 @@ class BoolField(_AtomicField):
     empty_value = False
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_false: bool = False,
-                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
+                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
+                 validators: Optional[List[Validator]] = None):
         """
         Boolean value (annotation bool), accepting boolean values or true/yes/false/no strings.
         :param default: Means the field isn't required, used as default directly or called if callable
@@ -30,9 +31,10 @@ class BoolField(_AtomicField):
         :param hide_false: If the field's value is False, it will be hidden from serialized output
         :param primitive_name: Changes the key used to represent the field in serialized data - input or output
         :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
         """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_false,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
 
     def convert(self, value: Any) -> Any:
         if value is Missing:
@@ -82,7 +84,8 @@ class IntField(_BaseNumberField):
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_zero: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
-                 min_value: Optional[int] = None, max_value: Optional[int] = None):
+                 min_value: Optional[int] = None, max_value: Optional[int] = None,
+                 validators: Optional[List[Validator]] = None):
         """
         Integer value (annotation int), accepting integer values, whole float values or strings with integer values.
         :param default: Means the field isn't required, used as default directly or called if callable
@@ -92,9 +95,10 @@ class IntField(_BaseNumberField):
         :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
         :param min_value: Validation enforces the number is greater than or equal to this value
         :param max_value: Validation enforces the number is lower than or equal to this value
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
         """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_zero,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.min_value = min_value
         self.max_value = max_value
         self._set_min_max_value_validation(min_value, max_value)
@@ -120,7 +124,8 @@ class FloatField(_BaseNumberField):
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_zero: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
-                 min_value: Optional[float] = None, max_value: Optional[float] = None):
+                 min_value: Optional[float] = None, max_value: Optional[float] = None,
+                 validators: Optional[List[Validator]] = None):
         """
         Floating point value (annotation float), accepting float values, integers or strings with float values.
         :param default: Means the field isn't required, used as default directly or called if callable
@@ -130,9 +135,10 @@ class FloatField(_BaseNumberField):
         :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
         :param min_value: Validation enforces the number is greater than or equal to this value
         :param max_value: Validation enforces the number is lower than or equal to this value
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
         """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_zero,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.min_value = min_value
         self.max_value = max_value
         self._set_min_max_value_validation(min_value, max_value)
@@ -146,7 +152,8 @@ class StrField(_AtomicField):
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
-                 min_length: int = 0, max_length: Optional[int] = None, choices: Optional[Iterable[str]] = None):
+                 min_length: int = 0, max_length: Optional[int] = None, choices: Optional[Iterable[str]] = None,
+                 validators: Optional[List[Validator]] = None):
         """
         String value (annotation str), accepting string values, or anything that can be cast to a string.
         :param default: Means the field isn't required, used as default directly or called if callable
@@ -157,9 +164,10 @@ class StrField(_AtomicField):
         :param min_length: Validation enforces the string has a minimum number of characters (1 => non-empty)
         :param max_length: Validation enforces the string has a maximum number of characters
         :param choices: Validation enforces the string matches (case-sensitive) one of these choices
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
         """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         if (min_length > 0 or max_length is not None) and choices is not None:
             raise ConfigurationError('Cannot use min_length or max_length together with choices')
         self.min_length = min_length

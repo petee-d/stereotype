@@ -35,7 +35,7 @@ class Negation(Model):
 class Conjunction(Model):
     type = 'and'
 
-    operands: List[Union[IsEqual, Negation, Conjunction]] = list
+    operands: List[Union[IsEqual, Negation, Conjunction]] = []
 
 
 equality_copy = equality.copy(deep=True)

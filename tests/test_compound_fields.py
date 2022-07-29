@@ -114,7 +114,7 @@ class TestListType(TestCase):
 
     def test_size_validation(self):
         class Sizes(Model):
-            min: List[int] = ListField(default=list, min_length=1)
+            min: List[int] = ListField(default=[], min_length=1)
             max: Optional[List[float]] = ListField(default=None, max_length=3)
             exact: List[str] = ListField(min_length=3, max_length=3)
             min_max: List[MyStrModel] = ListField(min_length=1, max_length=3)
@@ -131,6 +131,7 @@ class TestListType(TestCase):
         }, ctx.exception.errors)
         Sizes({'min': ['4'], 'max': None, 'exact': ['a', 'b', 'c'], 'min_max': [{}, {}]}).validate()
         Sizes({'min': ['4', 2], 'max': {'4.2', 0}, 'exact': ['a', 'a', 'a'], 'min_max': [{}, {}, {}]}).validate()
+        self.assertIsNot(Sizes().min, Sizes().min)
 
     def test_field_options(self):
         my_role = Role('my-role')
@@ -214,6 +215,19 @@ class TestDictType(TestCase):
         self.assertEqual({'bool_to_model': None, 'str_to_floats': {}}, model.serialize())
         self.assertEqual('<MyDicts {int_to_int=Missing, str_to_floats={}, bool_to_model=None, '
                          'str_to_opt_dict={}}>', repr(model))
+
+    def test_empty_default(self):
+        class EmptyDicts(Model):
+            callable: Dict[str, str] = dict
+            kwarg: Dict[int, int] = DictField(default={}, hide_empty=True)
+            direct: Dict[float, float] = {}
+
+        empty = EmptyDicts()
+        self.assertEqual({}, empty.kwarg)
+        self.assertEqual({'callable': {}, 'direct': {}}, empty.serialize())
+        self.assertIsNot(empty.callable, EmptyDicts().callable)
+        self.assertIsNot(empty.kwarg, EmptyDicts().kwarg)
+        self.assertIsNot(empty.direct, EmptyDicts().direct)
 
     def test_basic(self):
         model = MyDicts({

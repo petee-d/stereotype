@@ -58,6 +58,11 @@ class ListField(_CompoundField):
         item_annotation, = get_args(parser.annotation)
         self.item_field = AnnotationResolver(item_annotation).resolve(self.item_field)
 
+    def init_default(self, default: Any):
+        if default == self.empty_value:
+            default = list
+        super().init_default(default)
+
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)
         item_field = self.item_field
@@ -130,6 +135,11 @@ class DictField(_CompoundField):
         if not self.key_field.atomic:
             raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {parser!r}')
         self.value_field = AnnotationResolver(value_annotation).resolve(self.value_field)
+
+    def init_default(self, default: Any):
+        if default == self.empty_value:
+            default = dict
+        super().init_default(default)
 
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)

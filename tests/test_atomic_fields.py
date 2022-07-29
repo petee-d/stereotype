@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Optional
 from unittest import TestCase
 
@@ -287,8 +288,10 @@ class TestStrField(TestCase):
             min_max: Optional[str] = StrField(min_length=1, max_length=6)
             exact: str = StrField(min_length=3, max_length=3)
             choices: Optional[str] = StrField(choices=('a', 'bb', 'ccc'))
+            reg_str: str = StrField(regex='[a-z]{3,5}', default='abc')
+            reg_pattern: Optional[str] = StrField(default=None, regex=re.compile('hello', re.IGNORECASE))
 
-        StrModel({
+        valid = StrModel({
             'normal': 'a',
             'non_empty': 'abc',
             'min': 'abc',
@@ -296,7 +299,8 @@ class TestStrField(TestCase):
             'min_max': 'a',
             'exact': 'abc',
             'choices': 'bb',
-        }).validate()
+        })
+        valid.validate()
 
         model = StrModel({
             'normal': 4,
@@ -306,6 +310,8 @@ class TestStrField(TestCase):
             'min_max': '',
             'exact': True,
             'choices': 'c',
+            'reg_str': 'a/b',
+            'reg_pattern': 'HELLo',
         })
         self.assertEqual('4', model.normal)
         self.assertEqual('', model.non_empty)
@@ -323,7 +329,13 @@ class TestStrField(TestCase):
             'min_max': ['Must be 1 to 6 characters long'],
             'exact': ['Must be exactly 3 characters long'],
             'choices': ['Must be one of: a, bb, ccc'],
+            'reg_str': ['Must match regex `[a-z]{3,5}`'],
         }, ctx.exception.errors)
+
+        valid.reg_pattern = 'hi'
+        with self.assertRaises(ValidationError) as ctx:
+            valid.validate()
+        self.assertEqual({'reg_pattern': ['Must match regex `hello` (case insensitive)']}, ctx.exception.errors)
 
         self.assertEqual('<Field non_empty of type Optional[str], required>', repr(StrModel.__fields__[1]))
 
@@ -332,7 +344,11 @@ class TestStrField(TestCase):
             class LengthChoices(Model):
                 unused: LengthChoices
                 bad: str = StrField(min_length=1, choices=('x', 'y', 'zz'))
-        self.assertEqual('Cannot use min_length or max_length together with choices', str(ctx.exception))
+        self.assertEqual('Can only validate length, choices or regex; not combinations of these', str(ctx.exception))
+
+        with self.assertRaises(ConfigurationError) as ctx:
+            StrField(choices=('x', 'y', 'zz'), regex='x|y|zz')
+        self.assertEqual('Can only validate length, choices or regex; not combinations of these', str(ctx.exception))
 
     def test_hide_empty(self):
         class Hidden(Model):

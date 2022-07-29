@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Union, Any, Iterable, Optional, List
 
 from stereotype.fields.annotations import AnnotationResolver
@@ -145,7 +146,7 @@ class FloatField(_BaseNumberField):
 
 
 class StrField(_AtomicField):
-    __slots__ = _AtomicField.__slots__ + ('min_length', 'max_length', 'choices')
+    __slots__ = _AtomicField.__slots__ + ('min_length', 'max_length', 'choices', 'regex')
     type = str
     type_repr = 'str'
     empty_value = ''
@@ -153,7 +154,7 @@ class StrField(_AtomicField):
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  min_length: int = 0, max_length: Optional[int] = None, choices: Optional[Iterable[str]] = None,
-                 validators: Optional[List[Validator]] = None):
+                 regex: str | re.Pattern | None = None, validators: Optional[List[Validator]] = None):
         """
         String value (annotation str), accepting string values, or anything that can be cast to a string.
         :param default: Means the field isn't required, used as default directly or called if callable
@@ -164,15 +165,17 @@ class StrField(_AtomicField):
         :param min_length: Validation enforces the string has a minimum number of characters (1 => non-empty)
         :param max_length: Validation enforces the string has a maximum number of characters
         :param choices: Validation enforces the string matches (case-sensitive) one of these choices
+        :param regex: Validation enforces the string matches the regular expression
         :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
         """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
-        if (min_length > 0 or max_length is not None) and choices is not None:
-            raise ConfigurationError('Cannot use min_length or max_length together with choices')
+        if sum([min_length > 0 or max_length is not None, choices is not None, regex is not None]) > 1:
+            raise ConfigurationError('Can only validate length, choices or regex; not combinations of these')
         self.min_length = min_length
         self.max_length = max_length
         self.choices = {choice: None for choice in choices} if choices is not None else None  # Sets are not ordered
+        self.regex = re.compile(regex) if isinstance(regex, str) else regex
         if self.choices is not None:
             self.native_validate = self._validate_choices
         elif min_length > 0 and max_length is not None:
@@ -183,6 +186,8 @@ class StrField(_AtomicField):
             self.native_validate = self._validate_min_length
         elif max_length is not None:
             self.native_validate = self._validate_max_length
+        elif regex is not None:
+            self.native_validate = self._validate_regex
 
     def _validate_choices(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
         if value not in self.choices:
@@ -208,6 +213,11 @@ class StrField(_AtomicField):
     def _validate_max_length(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
         if len(value) > self.max_length:
             yield (), f'Must be at most {self.max_length} character{"s" if self.max_length > 1 else ""} long'
+
+    def _validate_regex(self, value: str, _: ValidationContextType) -> Iterable[PathErrorType]:
+        if not self.regex.match(value):
+            case = " (case insensitive)" if self.regex.flags & re.I else ""
+            yield (), f'Must match regex `{self.regex.pattern}`{case}'
 
 
 ATOMIC_TYPE_MAPPING = {

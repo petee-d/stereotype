@@ -50,7 +50,7 @@ class Employee(Model):
     human = True
 
     def greeting(self) -> str:
-        title = {True: "Ms. ", False: "Mr. "}.get(self.female, "")
+        title = {True: "Ms. ", False: "Mr. ", None: ""}[self.female]
         return f'Dear {title}{self.name}'
 ```
 * All models need to inherit from the `Model` class (directly or indirectly).
@@ -163,7 +163,8 @@ assert model.to_primitive() == {
     Validation rules for items may be specified by providing an explicit field instance in the `item_field` argument.
 * Dictionaries are created using the `Dict` type annotation, with an atomic key type and any value type.
 * Extra options can again be specified with an explicit `DictField`, such as validation rules for the keys and values.
-* You can use the `list` and `dict` constructors as defaults if the fields are not required.
+* You can use the `list` and `dict` constructors as defaults if the fields are not required. `[]` and `{}` used as
+    defaults are supported as special cases for convenience and will be replaced with their respective constructor.
 
 ```python
 model = Book({
@@ -230,7 +231,7 @@ class Negation(Model):
 class Conjunction(Model):
     type = 'and'
 
-    operands: List[Union[IsEqual, Negation, Conjunction]] = list
+    operands: List[Union[IsEqual, Negation, Conjunction]] = []
 
 
 equality_copy = equality.copy(deep=True)

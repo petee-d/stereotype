@@ -15,7 +15,7 @@ class Employee(Model):
     human = True
 
     def greeting(self) -> str:
-        title = {True: "Ms. ", False: "Mr. "}.get(self.female, "")
+        title = {True: "Ms. ", False: "Mr. ", None: ""}[self.female]
         return f'Dear {title}{self.name}'
 
 

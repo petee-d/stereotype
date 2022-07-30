@@ -24,6 +24,8 @@ class SerializableField(Field):
 
 def serializable(func: Optional[Callable[[Model], Any]] = None, *, hide_none: bool = False,
                  to_primitive_name: str = Missing):
+    """Decorator that turns properties or methods to output-only fields that are calculated from other fields."""
+
     def serializable_wrapper(wrapped_func: Callable[[Model], Any]):
         # Support wrapping properties, this allows for better type checking
         if isinstance(wrapped_func, property):

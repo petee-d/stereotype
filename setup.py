@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/petee-d/stereotype",
-    packages=setuptools.find_packages(),
+    packages=['stereotype', 'stereotype.fields', 'stereotype.compat', 'examples'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

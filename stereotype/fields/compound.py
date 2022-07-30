@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Iterable, get_args
+from typing import Any, Optional, Iterable, get_args, List
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field, ValidationContextType
 from stereotype.roles import Role, DEFAULT_ROLE
-from stereotype.utils import Missing, ConfigurationError, ConversionError, PathErrorType
+from stereotype.utils import Missing, ConfigurationError, ConversionError, PathErrorType, Validator
 
 
 class _CompoundField(Field):
@@ -14,9 +14,9 @@ class _CompoundField(Field):
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
-                 min_length: int = 0, max_length: Optional[int] = None):
+                 min_length: int = 0, max_length: Optional[int] = None, validators: Optional[List[Validator]] = None):
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.min_length = min_length
         self.max_length = max_length
 
@@ -45,10 +45,22 @@ class ListField(_CompoundField):
     def __init__(self, item_field: Field = NotImplemented, *,
                  default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
-                 min_length: int = 0, max_length: Optional[int] = None):
+                 min_length: int = 0, max_length: Optional[int] = None, validators: Optional[List[Validator]] = None):
+        """
+        List value (annotation typing.List), accepting lists of the inner type.
+        :param item_field: Optionally allows specifying further options for the type of the list's items
+        :param default: Means the field isn't required, should be None, [] or a callable, for example `list`
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param hide_empty: If the list is empty, it will be hidden from serialized output
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param min_length: Validation enforces the list has a minimum number of items (1 => non-empty)
+        :param max_length: Validation enforces the list has a maximum number of items
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
+        """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name,
-                         min_length=min_length, max_length=max_length)
+                         min_length=min_length, max_length=max_length, validators=validators)
         self.item_field: Field = item_field
         self.native_validate = self.validate
 
@@ -57,6 +69,11 @@ class ListField(_CompoundField):
             raise parser.incorrect_type(self)
         item_annotation, = get_args(parser.annotation)
         self.item_field = AnnotationResolver(item_annotation).resolve(self.item_field)
+
+    def init_default(self, default: Any):
+        if default == self.empty_value:
+            default = list
+        super().init_default(default)
 
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)
@@ -114,10 +131,23 @@ class DictField(_CompoundField):
     def __init__(self, key_field: Field = NotImplemented, value_field: Field = NotImplemented, *,
                  default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
-                 min_length: int = 0, max_length: Optional[int] = None):
+                 min_length: int = 0, max_length: Optional[int] = None, validators: Optional[List[Validator]] = None):
+        """
+        Dict value (annotation typing.Dict), accepting dicts with applicable keys and values.
+        :param key_field: Optionally allows specifying further options for the type of the dict's keys
+        :param value_field: Optionally allows specifying further options for the type of the dict's values
+        :param default: Means the field isn't required, should be None, {} or a callable, for example `dict`
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param hide_empty: If the dict is empty, it will be hidden from serialized output
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param min_length: Validation enforces the dict has a minimum number of items (1 => non-empty)
+        :param max_length: Validation enforces the dict has a maximum number of items
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
+        """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name,
-                         min_length=min_length, max_length=max_length)
+                         min_length=min_length, max_length=max_length, validators=validators)
         self.key_field: Field = key_field
         self.value_field: Field = value_field
         self.native_validate = self.validate
@@ -130,6 +160,11 @@ class DictField(_CompoundField):
         if not self.key_field.atomic:
             raise ConfigurationError(f'DictField keys may only be booleans, numbers or strings: {parser!r}')
         self.value_field = AnnotationResolver(value_annotation).resolve(self.value_field)
+
+    def init_default(self, default: Any):
+        if default == self.empty_value:
+            default = dict
+        super().init_default(default)
 
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)

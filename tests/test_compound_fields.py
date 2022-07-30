@@ -114,7 +114,7 @@ class TestListType(TestCase):
 
     def test_size_validation(self):
         class Sizes(Model):
-            min: List[int] = ListField(default=list, min_length=1)
+            min: List[int] = ListField(default=[], min_length=1)
             max: Optional[List[float]] = ListField(default=None, max_length=3)
             exact: List[str] = ListField(min_length=3, max_length=3)
             min_max: List[MyStrModel] = ListField(min_length=1, max_length=3)
@@ -131,6 +131,7 @@ class TestListType(TestCase):
         }, ctx.exception.errors)
         Sizes({'min': ['4'], 'max': None, 'exact': ['a', 'b', 'c'], 'min_max': [{}, {}]}).validate()
         Sizes({'min': ['4', 2], 'max': {'4.2', 0}, 'exact': ['a', 'a', 'a'], 'min_max': [{}, {}, {}]}).validate()
+        self.assertIsNot(Sizes().min, Sizes().min)
 
     def test_field_options(self):
         my_role = Role('my-role')
@@ -168,6 +169,7 @@ class TestListType(TestCase):
     def test_configuration_error_not_list(self):
         class Bad(Model):
             mismatch: Dict[str, MyStrModel] = ListField(item_field=ModelField())
+
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Field mismatch: ListField cannot be used for annotation typing.Dict[str, '
@@ -176,6 +178,7 @@ class TestListType(TestCase):
     def test_configuration_error_list_item_mismatch(self):
         class Bad(Model):
             worse: List[Optional[bool]] = ListField(item_field=StrField(hide_none=True))
+
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Field worse: StrField cannot be used for annotation bool, should use BoolField',
@@ -214,6 +217,39 @@ class TestDictType(TestCase):
         self.assertEqual({'bool_to_model': None, 'str_to_floats': {}}, model.serialize())
         self.assertEqual('<MyDicts {int_to_int=Missing, str_to_floats={}, bool_to_model=None, '
                          'str_to_opt_dict={}}>', repr(model))
+
+    def test_empty_default(self):
+        class EmptyDicts(Model):
+            callable: Dict[str, str] = dict
+            kwarg: Dict[int, int] = DictField(default={}, hide_empty=True)
+            direct: Dict[float, float] = {}
+
+        empty = EmptyDicts()
+        self.assertEqual({}, empty.kwarg)
+        self.assertEqual({'callable': {}, 'direct': {}}, empty.serialize())
+        self.assertIsNot(empty.callable, EmptyDicts().callable)
+        self.assertIsNot(empty.kwarg, EmptyDicts().kwarg)
+        self.assertIsNot(empty.direct, EmptyDicts().direct)
+
+    def test_field_validators(self):
+        def keys_different_from_values(value, _):
+            if any(key == value for key, value in value.items()):
+                raise ValueError("Keys must be different from their values")
+
+        def keys_same_as_values(value, _):
+            if any(key != value for key, value in value.items()):
+                raise ValueError("Keys must be same as their values")
+
+        class Impossible(Model):
+            futile: Dict[str, str] = DictField(validators=[keys_different_from_values, keys_same_as_values])
+
+        with self.assertRaises(ValidationError) as ctx:
+            Impossible({'futile': {'same': 'same', 'what': 'ever'}}).validate()
+        self.assertEqual({'futile': ['Keys must be different from their values']}, ctx.exception.errors)
+
+        with self.assertRaises(ValidationError) as ctx:
+            Impossible({'futile': {'different': 'value', 'one': 'another'}}).validate()
+        self.assertEqual({'futile': ['Keys must be same as their values']}, ctx.exception.errors)
 
     def test_basic(self):
         model = MyDicts({
@@ -326,6 +362,7 @@ class TestDictType(TestCase):
     def test_double_required_error(self):
         class RequiredDict(Model):
             dict: Dict[int, int]
+
         model = RequiredDict({'dict': {4: 2}})
         model.validate()
         self.assertEqual(2, model.dict[4])
@@ -336,6 +373,7 @@ class TestDictType(TestCase):
     def test_configuration_error_not_dict(self):
         class Bad(Model):
             mismatch: List[MyStrModel] = DictField(key_field=BoolField(), value_field=ModelField())
+
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Field mismatch: DictField cannot be used for annotation '
@@ -344,6 +382,7 @@ class TestDictType(TestCase):
     def test_configuration_error_invalid_key(self):
         class InvalidKey(Model):
             bad: Dict[MyStrModel, bool]
+
         with self.assertRaises(ConfigurationError) as ctx:
             InvalidKey()
         self.assertEqual('Field bad: DictField keys may only be booleans, numbers or strings: '
@@ -352,6 +391,7 @@ class TestDictType(TestCase):
     def test_configuration_error_dict_key_mismatch(self):
         class Bad(Model):
             bad: Dict[int, bool] = DictField(key_field=FloatField())
+
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Field bad: FloatField cannot be used for annotation int, should use IntField',
@@ -360,6 +400,7 @@ class TestDictType(TestCase):
     def test_configuration_error_dict_value_mismatch(self):
         class Bad(Model):
             worse: Dict[int, bool] = DictField(value_field=ModelField())
+
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
         self.assertEqual('Field worse: ModelField cannot be used for annotation bool, should use BoolField',

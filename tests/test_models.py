@@ -277,6 +277,7 @@ class TestModels(TestCase):
     def test_any_field_configuration_error_mismatch(self):
         class Bad(Model):
             bad: Set[int] = AnyField(hide_none=True)
+
         with self.assertRaises(ConfigurationError) as e:
             Bad()
         self.assertEqual('Field bad: AnyField cannot be used for annotation typing.Set[int]', str(e.exception))
@@ -284,6 +285,7 @@ class TestModels(TestCase):
     def test_any_field_configuration_error_none_default(self):
         class Bad(Model):
             bad: Any = None
+
         with self.assertRaises(ConfigurationError) as e:
             Bad()
         self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))

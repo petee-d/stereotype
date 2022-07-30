@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast, Union, get_args
+from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast, Union, get_args, List
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.model import Model
 from stereotype.roles import Role, DEFAULT_ROLE
-from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator
 
 
 class ModelField(Field):
@@ -15,9 +15,19 @@ class ModelField(Field):
     empty_value = {}
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
-                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
+                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
+                 validators: Optional[List[Validator]] = None):
+        """
+        Field containing another specific Model, as specified in the annotation.
+        :param default: Means the field isn't required, should be None or a callable, for example the model's class
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param hide_empty: If the model serializes as an empty dict, it will be hidden from serialized output
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
+        """
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.type: Type[Model] = cast(Type[Model], NotImplemented)
         self.native_validate = self.validate
 
@@ -63,9 +73,18 @@ class DynamicModelField(Field):
     type = Model
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False,
-                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
+                 primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
+                 validators: Optional[List[Validator]] = None):
+        """
+        Field containing one of models recognized by their `type`, specified as a `typing.Union` of Model subclasses.
+        :param default: Means the field isn't required, should be None or a callable, for example a model's class
+        :param hide_none: If the field's value is None, it will be hidden from serialized output
+        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
+        """
         super().__init__(default=default, hide_none=hide_none,
-                         primitive_name=primitive_name, to_primitive_name=to_primitive_name)
+                         primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.types: Tuple[Type[Model], ...] = NotImplemented
         self.type_map: Dict[str, Type[Model]] = NotImplemented
         self.native_validate = self.validate

@@ -2,9 +2,13 @@
 
 ## v1.2.0
 Features:
-* Added support for empty lists and dicts as defaults in `ListField` and `DictField`
 * Added support for field validator callbacks
 * Added support for regex validation in `StrField`
+* Added support for empty lists and dicts as defaults in `ListField` and `DictField`
+* Added most missing docstrings
+
+Changes:
+* Renamed `compat` package to `contrib`
 
 ## v1.1.0
 Features:

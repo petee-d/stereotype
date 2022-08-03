@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# Keep this file synchronized with the `stereotype/compat/README.md` documentation!
+# Keep this file synchronized with the `stereotype/contrib/README.md` documentation!
 
 from typing import Optional, List
 
@@ -8,7 +8,7 @@ from schematics.models import Model as SchematicsModel
 from schematics.types import StringType, IntType
 
 from stereotype import Model, ListField
-from stereotype.compat.schematics import SchematicsModelField
+from stereotype.contrib.schematics import SchematicsModelField
 
 
 class Leaf(SchematicsModel):

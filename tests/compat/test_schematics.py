@@ -9,7 +9,7 @@ from schematics.types import IntType, StringType, FloatType, BooleanType
 from schematics.types.compound import ModelType, ListType
 
 from stereotype import Model, StrField, Missing, Role, ValidationError, RequestedRoleFields, ConfigurationError
-from stereotype.compat.schematics import SchematicsModelField
+from stereotype.contrib.schematics import SchematicsModelField
 
 
 ROLE_X = Role('x')

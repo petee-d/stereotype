@@ -23,7 +23,7 @@ from schematics.models import Model as SchematicsModel
 from schematics.types import StringType, IntType
 
 from stereotype import Model, ListField
-from stereotype.compat.schematics import SchematicsModelField
+from stereotype.contrib.schematics import SchematicsModelField
 
 
 class Leaf(SchematicsModel):

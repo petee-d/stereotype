@@ -3,7 +3,7 @@
 ## v1.1.0
 Features:
 * Enabled using Schematics models as fields via `SchematicsModelField` - see
-  [here](https://github.com/petee-d/stereotype/tree/master/stereotype/compat#schematics)
+  [here](https://github.com/petee-d/stereotype/tree/master/stereotype/contrib#schematics)
 * Added `hide_empty` support to `ModelField`, allowing to omit models serialized as empty dicts
 
 Changes:

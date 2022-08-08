@@ -128,7 +128,7 @@ class Field:
                 self.to_primitive_name, self.hide_none, self.hide_empty, self.empty_value)
 
     def has_validation(self) -> bool:
-        return self.required or not self.allow_none or self.validator_method or self.native_validate
+        return self.required or not self.allow_none or self.validator_method or self.native_validate or self.validators
 
     def __repr__(self):
         type_repr = f'Optional[{self.type_repr}]' if self.allow_none else self.type_repr

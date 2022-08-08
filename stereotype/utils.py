@@ -4,6 +4,7 @@ from typing import Union, List, Dict, Tuple, cast, Any, Callable
 
 
 class _MissingType:
+    """A special singleton type - only use for the public global Missing object defined below."""
     def __bool__(self):
         return False
 
@@ -11,6 +12,9 @@ class _MissingType:
         return 'Missing'
 
 
+# Placeholder value for required fields (i.e., the field doesn't specify a default, nothing to do with Optional).
+# Validation will always fail if this value is present, i.e. it's never present in valid models.
+# In the unlikely event of needing to check for this value in code, use `model.field is Missing`.
 Missing = _MissingType()
 
 

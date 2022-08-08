@@ -103,11 +103,11 @@ class Model(metaclass=ModelMeta):
                 except ValueError as e:
                     yield (input_name,), str(e)
             if validators is not None:
-                try:
-                    for validator in validators:
+                for validator in validators:
+                    try:
                         validator(value, context)
-                except ValueError as e:
-                    yield (input_name,), str(e)
+                    except ValueError as e:
+                        yield (input_name,), str(e)
 
     @classmethod
     def declare_roles(cls) -> Iterable[RequestedRoleFields]:

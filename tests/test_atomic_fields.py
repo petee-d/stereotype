@@ -382,6 +382,6 @@ class TestFieldCommon(TestCase):
             Validators({'default': 1, 'optional': 1, 'required': 1}).validate(context='amount')
         self.assertEqual({
             'default': ['Not that one'],  # Tests validators force inclusion in __validated_fields__
-            'optional': ['Must be an even amount'],
-            'required': ['Not that one'],
+            'optional': ['Must be an even amount', 'Not that one'],  # Order same as the order of validators
+            'required': ['Not that one', 'Must be an even amount'],
         }, ctx.exception.errors)

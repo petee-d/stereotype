@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any, Optional, Iterable, get_args, List
 
 from stereotype.fields.annotations import AnnotationResolver
-from stereotype.fields.base import Field, ValidationContextType
+from stereotype.fields.base import Field, ValidationContextType, field_method_overriden
 from stereotype.roles import Role, DEFAULT_ROLE
-from stereotype.utils import Missing, ConfigurationError, ConversionError, PathErrorType, Validator
+from stereotype.utils import Missing, ConfigurationError, ConversionError, PathErrorType, Validator, \
+    ToPrimitiveContextType
 
 
 class _CompoundField(Field):
@@ -110,13 +111,13 @@ class ListField(_CompoundField):
         item_copy = self.item_field.copy_value
         return [item_copy(item) for item in value]
 
-    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         if value is None or value is Missing:
             return value
-        if self.item_field.atomic:
+        if not self.item_field.custom_to_primitive:
             return list(value)
         item_to_primitive = self.item_field.to_primitive
-        return [item_to_primitive(item, role) for item in value]
+        return [item_to_primitive(item, role, context) for item in value]
 
     @property
     def type_repr(self):
@@ -209,13 +210,13 @@ class DictField(_CompoundField):
         item_to_primitive = self.value_field.copy_value
         return {key: item_to_primitive(val) for key, val in value.items()}
 
-    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         if value is None or value is Missing:
             return value
-        if self.value_field.atomic:
+        if not self.value_field.custom_to_primitive:
             return dict(value)
         item_to_primitive = self.value_field.to_primitive
-        return {key: item_to_primitive(val, role) for key, val in value.items()}
+        return {key: item_to_primitive(val, role, context) for key, val in value.items()}
 
     @property
     def type_repr(self):

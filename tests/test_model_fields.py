@@ -4,7 +4,7 @@ from typing import Optional, Union, Type, Set
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, DynamicModelField, \
-    ConfigurationError, IntField
+    ConfigurationError, IntField, DEFAULT_ROLE
 from tests.common import Leaf
 
 
@@ -26,6 +26,12 @@ class Trunk(Model):
     def validate_right(self, value: Optional[Union[Branch, Leaf]], _):
         if isinstance(value, Branch) and value.leaf.color == 'green':
             raise ValueError('Trees cannot have green leaves on the right side')
+
+    def to_primitive(self, role=DEFAULT_ROLE, context=None):
+        serialized = super().to_primitive(role, context)
+        if context is not None and context.get('private', False):
+            serialized['left'] = serialized['right'] = '<hidden>'
+        return serialized
 
 
 class Root(Model):
@@ -102,6 +108,13 @@ class TestModelType(TestCase):
         self.assertIsNone(model.trunk.left)
         model.trunk = None
         self.assertEqual({'depth': 2, 'trunk': None}, model.serialize())
+
+    def test_to_primitive_context(self):
+        model = Root({'depth': 2})
+        self.assertEqual(
+            model.to_primitive(context={'private': True}),
+            {'depth': 2, 'trunk': {'left': '<hidden>', 'right': '<hidden>'}}
+        )
 
 
 class TestDynamicModelField(TestCase):

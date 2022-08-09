@@ -26,9 +26,13 @@ class ConfigurationError(StereotypeError, AssertionError):
     pass
 
 
-# The validation context is an obscure value pass along to custom Field validators and validate_* methods on Models.
+# The validation context is an opaque value passed along to custom Field validators and validate_* methods on Models.
 # The type alias serves purely as internal documentation, making types easier to read.
 ValidationContextType = Any
+
+# The to_primitive context is an opaque value passed along for use in custom Field and Model implementations.
+# The type alias serves purely as internal documentation, making types easier to read.
+ToPrimitiveContextType = Any
 
 # An error message (second element) with a path of primitive field names leading to the bad data.
 PathErrorType = Tuple[Tuple[str, ...], str]

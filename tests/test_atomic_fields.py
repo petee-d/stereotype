@@ -196,6 +196,7 @@ class FloatModel(Model):
     max: Optional[float] = FloatField(max_value=47.42, default=42., primitive_name='top', to_primitive_name='max')
     min_max: float = FloatField(min_value=1.5, max_value=4, default=lambda: 3.5, hide_none=True)
 
+    # noinspection PyMethodMayBeStatic
     def validate_min(self, value: int, _):
         # Would fail if executed with None
         if value % 2 == 0:
@@ -357,3 +358,30 @@ class TestStrField(TestCase):
 
         self.assertEqual({'empty': None}, Hidden({'none': None, 'empty': None}).serialize())
         self.assertEqual({'none': ''}, Hidden({'none': '', 'empty': ''}).serialize())
+
+
+class TestFieldCommon(TestCase):
+    def test_validators(self):
+        def not_1(value, _):
+            if value == 1:
+                raise ValueError('Not that one')
+
+        class Validators(Model):
+            default: Optional[int] = IntField(default=None, validators=[not_1])
+            optional: Optional[float] = FloatField(validators=[is_even, not_1])
+            required: float = FloatField(validators=[not_1, is_even])
+
+        with self.assertRaises(ValidationError) as ctx:
+            Validators({'required': None}).validate()
+        self.assertEqual({
+            'optional': ['This field is required'],  # Validators don't trigger for missing required fields
+            'required': ['This field is required'],  # Validators don't trigger for None non-optional fields
+        }, ctx.exception.errors)
+
+        with self.assertRaises(ValidationError) as ctx:
+            Validators({'default': 1, 'optional': 1, 'required': 1}).validate(context='amount')
+        self.assertEqual({
+            'default': ['Not that one'],  # Tests validators force inclusion in __validated_fields__
+            'optional': ['Must be an even amount', 'Not that one'],  # Order same as the order of validators
+            'required': ['Not that one', 'Must be an even amount'],
+        }, ctx.exception.errors)

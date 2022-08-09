@@ -245,7 +245,9 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ValidationError) as ctx:
             Impossible({'futile': {'same': 'same', 'what': 'ever'}}).validate()
-        self.assertEqual({'futile': ['Keys must be different from their values']}, ctx.exception.errors)
+        self.assertEqual({
+            'futile': ['Keys must be different from their values', 'Keys must be same as their values'],
+        }, ctx.exception.errors)
 
         with self.assertRaises(ValidationError) as ctx:
             Impossible({'futile': {'different': 'value', 'one': 'another'}}).validate()

@@ -54,8 +54,8 @@ class Employee(Model):
         return f'Dear {title}{self.name}'
 ```
 * All models need to inherit from the `Model` class (directly or indirectly).
-* All class attributes that have a type annotation (i.e. the attribute name is followed with a colon) will be converted
-    to model fields, i.e. they can be deserialized from input, serialized to output or be validated.
+* All public class attributes that have a type annotation (i.e. the attribute name is followed with a colon) will be
+    converted to model fields, i.e. they can be deserialized from input, serialized to output or be validated.
     See [Fields] for information about what types are supported.
 * Fields the type of which is `Optional` (a.k.a. `Union[None, other]`) will be valid even if `None` is supplied.
 * The assigned value for a field will be used as the default if the key was not present in the input. Note `None` in the

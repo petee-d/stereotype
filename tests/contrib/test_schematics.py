@@ -20,6 +20,12 @@ class Inner(SchematicsModel):
     stuff = ListType(FloatType(required=True), required=True, default=list, max_size=2)
     bool = BooleanType(required=True)
 
+    def to_primitive(self, role=None, context=None):
+        data = super().to_primitive(role, context)
+        if context is not None and context.get('private', False):
+            data['stuff'] = '<hidden>'
+        return data
+
     class Options:
         roles = {
             ROLE_X.name: blacklist('stuff'),
@@ -134,3 +140,13 @@ class TestSchematicsModelField(TestCase):
             Bad()
         self.assertEqual("Field worse: SchematicsModelField cannot be used for annotation Root, should use ModelField",
                          str(e.exception))
+
+    def test_to_primitive_context(self):
+        root = Root({
+            'number': 47,
+            'string': False,
+            'inner': {'stuff': [1, 2, 3], 'bool': 1},
+            'otter': {'integer': '7', 'string': 1, 'recursive': {'stuff': [1., 2., 3.]}},
+        })
+        primitive_value = root.to_primitive(context={'private': True})
+        self.assertEqual(primitive_value['inner']['stuff'], '<hidden>')

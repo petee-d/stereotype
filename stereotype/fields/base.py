@@ -5,16 +5,22 @@ from typing import Any, Optional, Callable, Iterable, TYPE_CHECKING, List, Tuple
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.roles import DEFAULT_ROLE, Role
-from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator, \
+    ToPrimitiveContextType
 
 if TYPE_CHECKING:  # pragma: no cover
     from stereotype.model import _OutputFieldConfig, _InputFieldConfig, _ValidatedFieldConfig, _ValidatorMethod, \
         _NativeValidator, _SerializableFn
 
 
+def field_method_overriden(obj, method_name) -> bool:
+    return getattr(type(obj), method_name) is not getattr(Field, method_name)
+
+
 class Field:
     __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'native_validate', 'validator_method',
-                 'validators', 'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable')
+                 'validators', 'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable',
+                 'custom_to_primitive')
     type = NotImplemented
     type_repr: str = NotImplemented
     atomic: bool = False
@@ -54,6 +60,7 @@ class Field:
         self.hide_none = hide_none
         assert not (hide_empty and self.empty_value is NotImplemented), f'{type(self)} does not support hide_empty'
         self.hide_empty = hide_empty
+        self.custom_to_primitive = field_method_overriden(self, 'to_primitive')
 
     def init_from_annotation(self, parser: AnnotationResolver):
         """Check this Field type is appropriate for the annotation and load any nested types from it."""
@@ -110,7 +117,7 @@ class Field:
             return None
         return self.type(value)
 
-    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         return value
 
     def copy_value(self, value: Any) -> Any:
@@ -124,8 +131,9 @@ class Field:
                 self.native_validate, self.validator_method, self.validators)
 
     def make_output_config(self) -> _OutputFieldConfig:
-        return (self.name, self.serializable, self.to_primitive if not self.atomic else None,
-                self.to_primitive_name, self.hide_none, self.hide_empty, self.empty_value)
+        return (self.name, self.serializable,
+                self.to_primitive if self.custom_to_primitive else None, self.to_primitive_name,
+                self.hide_none, self.hide_empty, self.empty_value)
 
     def has_validation(self) -> bool:
         return self.required or not self.allow_none or self.validator_method or self.native_validate or self.validators
@@ -173,5 +181,5 @@ class AnyField(Field):
     def copy_value(self, value: Any) -> Any:
         return deepcopy(value)
 
-    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         return deepcopy(value) if self.deep_copy else value

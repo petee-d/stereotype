@@ -7,7 +7,7 @@ from schematics.models import Model as SchematicsModel
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.model import ModelField
 from stereotype.roles import DEFAULT_ROLE, Role
-from stereotype.utils import Missing, ValidationContextType, PathErrorType
+from stereotype.utils import Missing, ValidationContextType, PathErrorType, ToPrimitiveContextType
 
 
 class SchematicsModelField(ModelField):
@@ -35,12 +35,12 @@ class SchematicsModelField(ModelField):
             return value
         return deepcopy(value)
 
-    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         if value is None or value is Missing:
             return value
         role_str = role.name if role is not DEFAULT_ROLE else None
         value: SchematicsModel
-        return value.to_primitive(role_str)
+        return value.to_primitive(role_str, context)
 
 
 def _iterate_validation_errors(messages: dict) -> Iterable[PathErrorType]:

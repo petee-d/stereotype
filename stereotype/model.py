@@ -41,8 +41,12 @@ class Model(metaclass=ModelMeta):
             except (TypeError, ValueError) as e:
                 raise ConversionError.new(str(e), primitive_name)
 
-    def to_primitive(self, role: Role = DEFAULT_ROLE):
-        """Creates raw data from this Model. The role can be used together with declare_roles to exclude fields."""
+    def to_primitive(self, role: Role = DEFAULT_ROLE, context=None):
+        """
+        Creates raw data from this Model, creating a copy of the data it was initialized with.
+        :param role: Can be used together with declare_roles to exclude fields for certain roles.
+        :param context: Optional value opaque to stereotype, useful for serializing custom field types.
+        """
         if role.code < len(self.__role_fields__):
             fields = self.__role_fields__[role.code]
         elif role.empty_by_default:
@@ -56,7 +60,7 @@ class Model(metaclass=ModelMeta):
                 value = getattr(self, name)
                 if value is Missing or to_primitive_name is None:
                     continue
-                converted = to_primitive(value, role) if to_primitive is not None else value
+                converted = to_primitive(value, role, context) if to_primitive is not None else value
                 if (converted is None and hide_none) or (hide_empty and converted == empty_value):
                     continue
                 result[to_primitive_name] = converted
@@ -67,16 +71,20 @@ class Model(metaclass=ModelMeta):
                 result[to_primitive_name] = value
         return result
 
-    def serialize(self, role: Role = DEFAULT_ROLE):
-        """Creates raw data from this Model. The role can be used together with declare_roles to exclude fields."""
-        return self.to_primitive(role)
+    def serialize(self, role: Role = DEFAULT_ROLE, context=None):
+        """
+        Creates raw data from this Model, creating a copy of the data it was initialized with.
+        :param role: Can be used together with declare_roles to exclude fields for certain roles.
+        :param context: Optional value opaque to stereotype, useful for serializing custom field types.
+        """
+        return self.to_primitive(role, context)
 
     def validate(self, context=None):
         """
         Validates data, raising a ValidationError with potentially multiple error messages, mapped by field paths.
         Validation catches: fields without defaults missing in data, None in non-Optional fields and failing validators
           - whether native Field validation options or custom validate_* methods.
-        :param context: Optional value obscure to stereotype, passed to any custom validation methods (validate_*).
+        :param context: Optional value opaque to stereotype, passed to any custom validation methods (validate_*).
         """
         errors = list(self.validation_errors(context))
         if errors:
@@ -87,7 +95,7 @@ class Model(metaclass=ModelMeta):
         Validates data, yielding errors one by one, each with a field path.
         Validation catches: fields without defaults missing in data, None in non-Optional fields and failing validators
           - whether native Field validation options, custom Field validators or custom validate_* methods.
-        :param context: Optional value obscure to stereotype, passed to Field validators and validate_* Model methods.
+        :param context: Optional value opaque to stereotype, passed to Field validators and validate_* Model methods.
         """
         for name, input_name, allow_none, native_validate, validator_method, validators in self.__validated_fields__:
             value = getattr(self, name)
@@ -194,7 +202,7 @@ class Model(metaclass=ModelMeta):
 _NativeValidator = Callable[[Any, ValidationContextType], Iterable[PathErrorType]]
 _ValidatorMethod = Callable[[Model, Any, ValidationContextType], None]
 _SerializableFn = Callable[[Model], Any]
-_ToPrimitive = Callable[[Any, Role], Any]
+_ToPrimitive = Callable[[Any, Role, Any], Any]
 
 # These rather ugly tuples measurably improve performance compared to accessing field attributes
 _InputFieldConfig = Tuple[

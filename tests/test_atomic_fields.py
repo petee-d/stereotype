@@ -5,7 +5,8 @@ from typing import Optional
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
-    FloatField, StrField
+    FloatField, StrField, DEFAULT_ROLE
+from tests.common import PrivateStrField
 
 
 class BoolModel(Model):
@@ -385,3 +386,13 @@ class TestFieldCommon(TestCase):
             'optional': ['Must be an even amount', 'Not that one'],  # Order same as the order of validators
             'required': ['Not that one', 'Must be an even amount'],
         }, ctx.exception.errors)
+
+
+class TestCustomStrField(TestCase):
+    def test_to_primitive_context(self):
+        class SensitiveModel(Model):
+            sensitive: str = PrivateStrField(min_length=1)
+
+        model = SensitiveModel({'sensitive': 'private stuff'})
+        self.assertEqual(model.to_primitive(), {'sensitive': 'private stuff'})
+        self.assertEqual(model.to_primitive(context={'private': True}), {'sensitive': '<hidden>'})

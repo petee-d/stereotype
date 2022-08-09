@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Optional, Union, List, Dict, cast, Iterable
+from typing import Optional, Union, List, Dict, cast, Iterable, Any
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, ConfigurationError, ListField, \
-    StrField, BoolField, FloatField
+    StrField, BoolField, FloatField, DEFAULT_ROLE
 from stereotype.fields.compound import DictField
 from stereotype.roles import RequestedRoleFields, Role
+from stereotype.utils import ToPrimitiveContextType
+from tests.common import PrivateStrField
 
 
 class MyBoolModel(Model):
@@ -183,6 +185,13 @@ class TestListType(TestCase):
             Bad()
         self.assertEqual('Field worse: StrField cannot be used for annotation bool, should use BoolField',
                          str(ctx.exception))
+
+    def test_to_primitive_context(self):
+        class Stuff(Model):
+            lst: List[str] = ListField(PrivateStrField())
+        model = Stuff({'lst': ['one', 'two']})
+        serialized = model.to_primitive(context={'private': True})
+        self.assertEqual(serialized['lst'], ['<hidden>', '<hidden>'])
 
 
 class MyDicts(Model):
@@ -407,3 +416,17 @@ class TestDictType(TestCase):
             Bad()
         self.assertEqual('Field worse: ModelField cannot be used for annotation bool, should use BoolField',
                          str(ctx.exception))
+
+    def test_to_primitive_context(self):
+        class Stuff(Model):
+            dct: Dict[str, str] = DictField(value_field=PrivateStrField())
+
+        model = Stuff({'dct': {
+            'one': 'foo',
+            'two': 'bar',
+        }})
+        serialized = model.to_primitive(context={'private': True})
+        self.assertEqual(serialized['dct'], {
+            'one': '<hidden>',
+            'two': '<hidden>',
+        })

@@ -6,7 +6,8 @@ from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.model import Model
 from stereotype.roles import Role, DEFAULT_ROLE
-from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator
+from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator, \
+    ToPrimitiveContextType
 
 
 class ModelField(Field):
@@ -57,10 +58,10 @@ class ModelField(Field):
             return value
         return value.copy(deep=True)
 
-    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         if value is None or value is Missing:
             return value
-        return value.to_primitive(role)
+        return value.to_primitive(role, context)
 
     @property
     def type_repr(self):
@@ -147,10 +148,10 @@ class DynamicModelField(Field):
             return value
         return value.copy(deep=True)
 
-    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE) -> Any:
+    def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         if value is None or value is Missing:
             return value
-        result = value.to_primitive(role)
+        result = value.to_primitive(role, context)
         result['type'] = value.type
         return result
 

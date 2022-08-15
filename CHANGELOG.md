@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.3.0
+Features:
+* Added support for passing opaque `context` when calling `to_primitive` on models and fields
+
+Fixes:
+* Fixed field validator callbacks not working for `Optional` fields with a default value
+* Renamed `tests.compat` package to `tests.contrib` to reflect the name change in v1.2.0
+
 ## v1.2.0
 Features:
 * Added support for field validator callbacks

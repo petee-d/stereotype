@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.1
+Fixes:
+* Fixed `Missing` behavior with `deepcopy`
+
 ## v1.3.0
 Features:
 * Added support for passing opaque `context` when calling `to_primitive` on models and fields

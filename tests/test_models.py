@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import copy, deepcopy
 from typing import Set, cast, Any, Optional, List, Dict, Union, Type
 from unittest import TestCase
 
@@ -290,7 +291,19 @@ class TestModels(TestCase):
             Bad()
         self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))
 
-    def test_missing_coverage(self):
+    def test_missing_singleton_copy(self):
+        class ProduceMissing(Model):
+            required: int
+
+        model = ProduceMissing()
+        self.assertIs(Missing, model.required)
+        self.assertIs(Missing, copy(model).required)
+        self.assertIs(Missing, deepcopy(model).required)
+        self.assertEqual({}, model.serialize())
+        self.assertEqual({}, copy(model).serialize())
+        self.assertEqual({}, deepcopy(model).serialize())
+
+    def test_ensure_missing_coverage(self):
         # The only purpose of this test is to ensure 100% coverage for *dead* code, where possible
         self.assertEqual(1, IntField().to_primitive(1))
 

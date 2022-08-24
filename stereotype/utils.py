@@ -11,9 +11,16 @@ class _MissingType:
     def __repr__(self):
         return 'Missing'
 
+    def __copy__(self):
+        return Missing  # Singleton instance, shall not be copied
+
+    def __deepcopy__(self, _):
+        return Missing  # Singleton instance, shall not be copied
+
 
 # Placeholder value for required fields (i.e., the field doesn't specify a default, nothing to do with Optional).
 # Validation will always fail if this value is present, i.e. it's never present in valid models.
+# It is a singleton object, no other instances of _MissingType should ever exist.
 # In the unlikely event of needing to check for this value in code, use `model.field is Missing`.
 Missing = _MissingType()
 

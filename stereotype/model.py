@@ -5,7 +5,7 @@ from typing import Optional, Tuple, List, Iterable, Type, Set, Any, Callable
 from stereotype.fields.base import Field
 from stereotype.meta import ModelMeta
 from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields, DEFAULT_ROLE
-from stereotype.utils import Missing, ValidationError, ConversionError, PathErrorType, ValidationContextType, Validator
+from stereotype.utils import Missing, ValidationError, PathErrorType, ValidationContextType, Validator
 
 
 class Model(metaclass=ModelMeta):
@@ -24,22 +24,12 @@ class Model(metaclass=ModelMeta):
         """
         if self.__input_fields__ is NotImplemented:
             self.__initialize_model__()
-        if raw_data is None:
-            raw_data = {}
-        elif not isinstance(raw_data, dict):
-            raise ConversionError.new(f'Supplied type {type(raw_data).__name__}, needs a mapping')
+        self.__generated_init__(raw_data)
 
-        for name, primitive_name, convert, copy_value in self.__input_fields__:
-            if primitive_name is None:
-                value = Missing
-            else:
-                value = raw_data.get(primitive_name, Missing)
-            try:
-                setattr(self, name, convert(value))
-            except ConversionError as e:
-                raise e.wrapped(primitive_name)
-            except (TypeError, ValueError) as e:
-                raise ConversionError.new(str(e), primitive_name)
+    __original_init__ = __init__
+
+    def __generated_init__(self, raw_data=None):
+        pass  # Will be replaced by generated code
 
     def to_primitive(self, role: Role = DEFAULT_ROLE, context=None):
         """

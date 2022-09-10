@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Optional, Iterable, get_args, List
 
+from stereotype.codegen import CodeGenerator
 from stereotype.fields.annotations import AnnotationResolver
-from stereotype.fields.base import Field, ValidationContextType, field_method_overriden
+from stereotype.fields.base import Field, ValidationContextType
 from stereotype.roles import Role, DEFAULT_ROLE
 from stereotype.utils import Missing, ConfigurationError, ConversionError, PathErrorType, Validator, \
     ToPrimitiveContextType
@@ -101,6 +102,26 @@ class ListField(_CompoundField):
             raise e.wrapped(str(error_index))
         except (TypeError, ValueError) as e:
             raise ConversionError.new(str(e), str(error_index))
+        return converted
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        converted = self._generate_convert_base(gen, value_expr)
+        gen.line("else:")
+        with gen.indent():
+            gen.line(f"{converted} = []")
+            error_index = gen.scoped_name("error_index")
+            gen.line(f"{error_index} = 0")
+            item = gen.scoped_name("item")
+            gen.line("try:")
+            with gen.indent():
+                gen.line(f"for {error_index}, {item} in enumerate({value_expr}):")
+                with gen.indent(), gen.name_scope("item"):
+                    item_expression = self.item_field.generate_convert(gen, item)
+                    gen.line(f"{converted}.append({item_expression})")
+            gen.line("except ConversionError as e:")
+            gen.line(f"    raise e.wrapped(str({error_index}))")
+            gen.line("except (TypeError, ValueError) as e:")
+            gen.line(f"    raise ConversionError.new(str(e), str({error_index}))")
         return converted
 
     def copy_value(self, value: Any) -> Any:
@@ -201,6 +222,31 @@ class DictField(_CompoundField):
             raise e.wrapped(str(error_key))
         except (TypeError, ValueError) as e:
             raise ConversionError.new(str(e), str(error_key))
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        converted = self._generate_convert_base(gen, value_expr)
+        gen.line("else:")
+        with gen.indent():
+            gen.line(f"if not isinstance({value_expr}, dict):")
+            gen.line(f"    raise TypeError(f'Expected a dict, got a {{type({value_expr}).__name__}}')")
+            gen.line(f"{converted} = {{}}")
+            dict_key = gen.scoped_name("key")
+            gen.line(f"{dict_key} = Missing  # Error cannot occur before the first assignment")
+            gen.line("try:")
+            with gen.indent():
+                dict_value = gen.scoped_name("value")
+                gen.line(f"for {dict_key}, {dict_value} in {value_expr}.items():")
+                with gen.indent():
+                    with gen.name_scope("key"):
+                        converted_key = self.key_field.generate_convert(gen, dict_key)
+                    with gen.name_scope("value"):
+                        converted_value = self.value_field.generate_convert(gen, dict_value)
+                    gen.line(f"{converted}[{converted_key}] = {converted_value}")
+            gen.line("except ConversionError as e:")
+            gen.line(f"    raise e.wrapped(str({dict_key}))")
+            gen.line("except (TypeError, ValueError) as e:")
+            gen.line(f"    raise ConversionError.new(str(e), str({dict_key}))")
+        return converted
 
     def copy_value(self, value: Any) -> Any:
         if value is None or value is Missing:

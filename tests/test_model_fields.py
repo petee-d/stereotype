@@ -88,10 +88,10 @@ class TestModelType(TestCase):
     def test_bad_type(self):
         with self.assertRaises(ConversionError) as ctx:
             Branch({'leaf': 'yellow'})
-        self.assertEqual({'leaf': ['Supplied type str, needs a mapping or Leaf']}, ctx.exception.errors)
+        self.assertEqual({'leaf': ['Supplied type str, needs a dict or Leaf']}, ctx.exception.errors)
         with self.assertRaises(ConversionError) as ctx:
             Branch({'leaf': Branch()})
-        self.assertEqual({'leaf': ['Supplied type Branch, needs a mapping or Leaf']}, ctx.exception.errors)
+        self.assertEqual({'leaf': ['Supplied type Branch, needs a dict or Leaf']}, ctx.exception.errors)
         with self.assertRaises(ValidationError) as ctx:
             Branch({'leaf': None}).validate()
         self.assertEqual({'leaf': ['This field is required']}, ctx.exception.errors)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast, Union, get_args, List
 
+from stereotype.codegen import CodeGenerator
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.model import Model
@@ -50,8 +51,20 @@ class ModelField(Field):
         if isinstance(value, self.type):
             return value
         if not isinstance(value, dict):
-            raise TypeError(f'Supplied type {type(value).__name__}, needs a mapping or {self.type.__name__}')
+            raise TypeError(f'Supplied type {type(value).__name__}, needs a dict or {self.type.__name__}')
         return self.type(value)
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        type_factory = gen.declare_scoped_global("type", self.type)
+        converted = self._generate_convert_base(gen, value_expr)
+        gen.line(f"elif isinstance({value_expr}, {type_factory}):")
+        gen.line(f"    {converted} = {value_expr}")
+        gen.line(f"elif not isinstance({value_expr}, dict):")
+        cls_name = self.type.__name__
+        gen.line(f"    raise TypeError(f'Supplied type {{type({value_expr}).__name__}}, needs a dict or {cls_name}')")
+        gen.line("else:")
+        gen.line(f"    {converted} = {type_factory}({value_expr})")
+        return converted
 
     def copy_value(self, value: Any) -> Any:
         if value is None or value is Missing:
@@ -142,6 +155,9 @@ class DynamicModelField(Field):
         if type_cls is None:
             raise TypeError(f'Got a mapping with unsupported `type` {value_type!r}')
         return type_cls(value)
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        return ""
 
     def copy_value(self, value: Any) -> Any:
         if value is None or value is Missing:

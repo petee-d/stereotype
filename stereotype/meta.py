@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Set, Type, TYPE_CHECKING, Optional
 
+from stereotype.codegen import CodeGenerator
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.fields.serializable import SerializableField
 from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields
-from stereotype.utils import ConfigurationError, Missing
+from stereotype.utils import ConfigurationError, Missing, ConversionError
 
 if TYPE_CHECKING:  # pragma: no cover
     from stereotype.model import Model
@@ -50,8 +51,9 @@ class ModelMeta(type):
             cls = cast(Type['Model'], type.__new__(mcs, name, bases, attrs))
         except TypeError as e:
             raise ConfigurationError(f'{name}: {e}, if inheriting from multiple models, only one may have __slots__ '
-                                     f'(declare abstract models without __slots__ by adding class attribute '
+                                     f'(declare_global abstract models without __slots__ by adding class attribute '
                                      f'`__abstract__ = True`)')
+        cls.__init__ = cls.__original_init__  # Prevent inheriting generated init from parent Models
         cls.__initialize_model__ = lambda *_: mcs._initialize_model(cls, bases, own_field_names, field_values)
         return cls
 
@@ -76,6 +78,9 @@ class ModelMeta(type):
         cls.__input_fields__ = [field.make_input_config() for field in input_fields]
         cls.__validated_fields__ = [field.make_validated_config() for field in input_fields if field.has_validation()]
         cls.__fields__ = input_fields + serializable
+        cls.__generated_init__ = mcs.generate_init_method(cls)
+        cls.__init__ = cls.__generated_init__
+        cls.validation_errors = mcs.generate_validation_errors_method(cls)
         mcs._build_roles(cls, model_bases, own_field_names)
 
     @classmethod
@@ -140,6 +145,80 @@ class ModelMeta(type):
         except NameError as e:
             raise ConfigurationError(f'Model {cls.__name__} annotation {str(e)}. If not a global symbol or cannot be '
                                      f'imported globally, use the class method `resolve_extra_types` to provide it.')
+
+    @classmethod
+    def generate_init_method(mcs, cls: Type[Model]):
+        gen = CodeGenerator()
+        gen.line("def __generated_init__(self, raw_data=None):")
+        gen.declare_global('Missing', Missing)
+        gen.declare_global('ConversionError', ConversionError)
+
+        with gen.indent():
+            gen.line("if raw_data is None:")
+            gen.line("    raw_data = {}")
+            gen.line("elif not isinstance(raw_data, dict):")
+            gen.line("    raise ConversionError.new(f'Supplied type {type(raw_data).__name__}, needs a mapping')")
+
+            for field in cls.__fields__:
+                if field.serializable is not None:
+                    continue
+                value_expr = "Missing"
+                if field.primitive_name is not None:
+                    gen.line(f"value = raw_data.get({repr(field.primitive_name)}, Missing)")
+                    value_expr = "value"
+
+                gen.line("try:")
+                with gen.indent(), gen.name_scope(field.name):
+                    expression = field.generate_convert(gen, value_expr)
+                    gen.line(f"self.{field.name} = {expression}")
+                gen.line("except ConversionError as e:")
+                gen.line(f"    raise e.wrapped({repr(field.primitive_name)})")
+                gen.line("except (TypeError, ValueError) as e:")
+                gen.line(f"    raise ConversionError.new(str(e), {repr(field.primitive_name)})")
+
+        return gen.exec("__generated_init__")
+
+    @classmethod
+    def generate_validation_errors_method(mcs, cls: Type[Model]):
+        gen = CodeGenerator()
+        gen.line("def validation_errors(self, context=None):")
+        gen.declare_global('Missing', Missing)
+
+        with gen.indent():
+            for name, input_name, allow_none, native_validate, method, validators in cls.__validated_fields__:
+                with gen.name_scope(name):
+                    value = gen.scoped_name("value")
+                    gen.line(f"{value} = self.{name}")
+                    allow_none_cond = f" or {value} is None" if not allow_none else ""
+                    gen.line(f"if {value} is Missing{allow_none_cond}:")
+                    gen.line(f"    yield ({input_name!r},), 'This field is required'")
+                    if native_validate is None and method is None and validators is None:
+                        continue
+
+                    gen.line("else:")
+                    with gen.indent():
+                        if native_validate is not None:
+                            native_validate_symbol = gen.declare_scoped_global("native_validate", native_validate)
+                            gen.line(f"if {value} is not None:")
+                            gen.line(f"    for path, error in {native_validate_symbol}({value}, context):")
+                            gen.line(f"        yield ({input_name!r},) + path, error")
+                        if method is not None:
+                            gen.line("try:")
+                            validator_method_symbol = gen.declare_scoped_global("validator_method", method)
+                            gen.line(f"    {validator_method_symbol}(self, {value}, context)")
+                            gen.line("except ValueError as e:")
+                            gen.line(f"    yield ({input_name!r},), str(e)")
+                        if validators is not None:
+                            for index, validator in enumerate(validators or ()):
+                                gen.line("try:")
+                                validator_symbol = gen.declare_scoped_global(f"validator_{index}", validator)
+                                gen.line(f"    {validator_symbol}({value}, context)")
+                                gen.line("except ValueError as e:")
+                                gen.line(f"    yield ({input_name!r},), str(e)")
+            else:
+                gen.line("yield from ()")
+                
+        return gen.exec("validation_errors")
 
     @classmethod
     def _build_roles(mcs, cls: Type[Model], bases: List[Type[Model]], own_field_names: Set[str]):

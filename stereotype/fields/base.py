@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Optional, Callable, Iterable, TYPE_CHECKING, List, Tuple
 
+from stereotype.codegen import CodeGenerator
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.roles import DEFAULT_ROLE, Role
 from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator, \
@@ -111,11 +112,44 @@ class Field:
         return self.default_factory()
 
     def convert(self, value: Any) -> Any:
+        # If overriding this, override also _generate_convert!
         if value is Missing:
             return self._fill_missing()
         if value is None:
             return None
         return self.type(value)
+
+    def generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        # TODO - Do not call _generate_convert if convert was overridden but _generate_convert wasn't!
+        expression = self._generate_convert(gen, value_expr)
+        if not expression:
+            # Code generation not supported by the field, call its convert method
+            converter = gen.declare_scoped_global("convert", self.convert)
+            expression = f"{converter}({value_expr})"
+        return expression
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        # Must be overridden if using custom convert!
+        type_factory = gen.declare_scoped_global("type", self.type)
+        converted = self._generate_convert_base(gen, value_expr)
+        gen.line("else:")
+        gen.line(f"    {converted} = {type_factory}({value_expr})")
+        return converted
+
+    def _generate_convert_base(self, gen: CodeGenerator, value_expr: str):
+        converted = gen.scoped_name("converted")
+        if self.required:
+            default_expression = "Missing"
+        elif self.default_factory is None:
+            default_expression = gen.declare_scoped_global("default", self.default)
+        else:
+            default_factory = gen.declare_scoped_global("default_factory", self.default_factory)
+            default_expression = f"{default_factory}()"
+        gen.line(f"if {value_expr} is Missing:")
+        gen.line(f"    {converted} = {default_expression}")
+        gen.line(f"elif {value_expr} is None:")
+        gen.line(f"    {converted} = None")
+        return converted
 
     def to_primitive(self, value: Any, role: Role = DEFAULT_ROLE, context: ToPrimitiveContextType = None) -> Any:
         return value
@@ -177,6 +211,15 @@ class AnyField(Field):
         if value is Missing:
             return self._fill_missing()
         return deepcopy(value) if self.deep_copy else value
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        converted = self._generate_convert_base(gen, value_expr)
+        gen.line("else:")
+        if self.deep_copy:
+            gen.declare_global('deepcopy', deepcopy)
+            value_expr = f'deepcopy({value_expr})'
+        gen.line(f"    {converted} = {value_expr}")
+        return converted
 
     def copy_value(self, value: Any) -> Any:
         return deepcopy(value)

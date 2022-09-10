@@ -110,7 +110,7 @@ class TestModels(TestCase):
             class Parent(Base1, Base2):
                 unused: Parent
         self.assertEqual('Parent: multiple bases have instance lay-out conflict, if inheriting from multiple models, '
-                         'only one may have __slots__ (declare abstract models without __slots__ by adding class '
+                         'only one may have __slots__ (declare_global abstract models without __slots__ by adding class '
                          'attribute `__abstract__ = True`)', str(ctx.exception))
 
     def test_none_primitive_name(self):

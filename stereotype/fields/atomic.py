@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Union, Any, Iterable, Optional, List
 
+from stereotype.codegen import CodeGenerator
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.utils import Missing, ConfigurationError, PathErrorType, ValidationContextType, Validator
@@ -21,6 +22,9 @@ class BoolField(_AtomicField):
     type = bool
     type_repr = 'bool'
     empty_value = False
+
+    true_strings = {'true', 'True', 'yes', 'Yes'}
+    false_strings = {'false', 'False', 'no', 'No'}
 
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_false: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
@@ -44,11 +48,25 @@ class BoolField(_AtomicField):
             return None
         if value is False or value is True:
             return value
-        if value in {'true', 'True', 'yes', 'Yes'}:
+        if value in self.true_strings:
             return True
-        if value in {'false', 'False', 'no', 'No'}:
+        if value in self.false_strings:
             return False
         raise TypeError('Value must be a boolean or a true/false/yes/no string value')
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        converted = self._generate_convert_base(gen, value_expr)
+        gen.line(f"elif {value_expr} is False or {value_expr} is True:")
+        gen.line(f"    {converted} = {value_expr}")
+        gen.declare_global("true_strings", self.true_strings)
+        gen.declare_global("false_strings", self.false_strings)
+        gen.line(f"elif {value_expr} in true_strings:")
+        gen.line(f"    {converted} = True")
+        gen.line(f"elif {value_expr} in false_strings:")
+        gen.line(f"    {converted} = False")
+        gen.line("else:")
+        gen.line("    raise TypeError('Value must be a boolean or a true/false/yes/no string value')")
+        return converted
 
 
 class _BaseNumberField(_AtomicField):
@@ -115,6 +133,18 @@ class IntField(_BaseNumberField):
             return int(value)
         except (ValueError, TypeError):
             raise TypeError(f'Value {value!r} is not an integer number')
+
+    def _generate_convert(self, gen: CodeGenerator, value_expr: str) -> str:
+        converted = self._generate_convert_base(gen, value_expr)
+        gen.line(f"elif isinstance({value_expr}, float) and {value_expr} != int({value_expr}):")
+        gen.line(f"    raise TypeError(f'Numeric value {{{value_expr}}} is not an integer')")
+        gen.line("else:")
+        with gen.indent():
+            gen.line("try:")
+            gen.line(f"    {converted} = int({value_expr})")
+            gen.line("except (ValueError, TypeError):")
+            gen.line(f"    raise TypeError(f'Value {{{value_expr}!r}} is not an integer number')")
+        return converted
 
 
 class FloatField(_BaseNumberField):

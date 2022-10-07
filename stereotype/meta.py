@@ -19,6 +19,7 @@ class ModelMeta(type):
 
         # Only annotated attributes iterated here for the purposes of slots, not serializable fields
         field_names = [name for name, annotation in mcs._iterate_fields(attrs.get('__annotations__', {}))]
+        mcs._check_explicit_field_annotations(name, set(field_names), attrs)
         field_values = {}
         for field_name in field_names:
             if field_name in attrs:
@@ -61,6 +62,13 @@ class ModelMeta(type):
             if name.startswith('_'):
                 continue
             yield name, annotation
+
+    @classmethod
+    def _check_explicit_field_annotations(mcs, cls_name: str, field_names: Set[str], attrs: Dict[str, Any]):
+        for name, value in attrs.items():
+            if isinstance(value, Field) and name not in field_names:
+                raise ConfigurationError(f"Field {name} of Model class {cls_name} defines an explicit Field "
+                                         f"but lacks a type annotation or isn't public")
 
     @classmethod
     def _initialize_model(mcs, cls: Type[Model], bases: Tuple[type, ...],

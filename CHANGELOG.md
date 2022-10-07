@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.2
+Changes:
+* Started raising `ConfigurationError` if a `Model` attribute is an explicit `Field` but lacks a type annotation
+
 ## v1.3.1
 Fixes:
 * Fixed `Missing` behavior with `deepcopy`

@@ -303,6 +303,20 @@ class TestModels(TestCase):
         self.assertEqual({}, copy(model).serialize())
         self.assertEqual({}, deepcopy(model).serialize())
 
+    def test_explicit_field_no_annotation_error(self):
+        with self.assertRaises(ConfigurationError) as ctx:
+            class NoAnnotation(Model):
+                some_field = StrField(max_length=5)
+            _ = NoAnnotation
+        self.assertEqual("Field some_field of Model class NoAnnotation defines an explicit Field "
+                         "but lacks a type annotation or isn't public", str(ctx.exception))
+        with self.assertRaises(ConfigurationError) as ctx:
+            class Private(Model):
+                _private: str = StrField(max_length=5)
+            _ = Private
+        self.assertEqual("Field _private of Model class Private defines an explicit Field "
+                         "but lacks a type annotation or isn't public", str(ctx.exception))
+
     def test_ensure_missing_coverage(self):
         # The only purpose of this test is to ensure 100% coverage for *dead* code, where possible
         self.assertEqual(1, IntField().to_primitive(1))

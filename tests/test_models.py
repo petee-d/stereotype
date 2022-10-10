@@ -181,13 +181,14 @@ class TestModels(TestCase):
             complex_dict: Dict[bool, Dummy]
             model: Dummy
             dynamic_model: Optional[Union[Dummy, Leaf]]
+            missing: Any = AnyField(deep_copy=True)
 
             @classmethod
             def resolve_extra_types(cls) -> Set[Type[Model]]:
                 return {Dummy}
 
         model = CopyRight({'any': None, 'atomic_dict': None, 'dynamic_model': None})
-        copy = model.copy(deep=True)
+        copied = model.copy(deep=True)
         model.atomic = 4.2
         model.any = {1: {True: False}}
         model.atomic_list = ['x']
@@ -196,7 +197,7 @@ class TestModels(TestCase):
         model.complex_dict = {True: Dummy({'field': [1]})}
         model.model = None
         model.dynamic_model = Dummy()
-        self.assertEqual({'any': None, 'complex_list': None, 'dynamic_model': None}, copy.serialize())
+        self.assertEqual({'any': None, 'complex_list': None, 'dynamic_model': None}, copied.serialize())
 
         model.model = Dummy({'field': [1, 2]})
         deep_copy = model.copy(deep=True)
@@ -240,6 +241,10 @@ class TestModels(TestCase):
             'model': {'field': []},
             'dynamic_model': {'type': 'dummy', 'field': [3]},
         }, shallow_copy.serialize())
+
+        self.assertIs(Missing, shallow_copy.missing)
+        self.assertIs(Missing, deep_copy.missing)
+        self.assertIs(Missing, copy(shallow_copy.missing))
 
     def test_any_field(self):
         class WithAny(Model):

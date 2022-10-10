@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional, Iterable, get_args, List
 
 from stereotype.fields.annotations import AnnotationResolver
-from stereotype.fields.base import Field, ValidationContextType, field_method_overriden
+from stereotype.fields.base import Field, ValidationContextType
 from stereotype.roles import Role, DEFAULT_ROLE
 from stereotype.utils import Missing, ConfigurationError, ConversionError, PathErrorType, Validator, \
     ToPrimitiveContextType

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional, Union, List, Dict, cast, Iterable, Any
+from typing import Optional, Union, List, Dict, cast, Iterable
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, ConfigurationError, ListField, \
-    StrField, BoolField, FloatField, DEFAULT_ROLE
+    StrField, BoolField, FloatField
 from stereotype.fields.compound import DictField
 from stereotype.roles import RequestedRoleFields, Role
-from stereotype.utils import ToPrimitiveContextType
 from tests.common import PrivateStrField
 
 

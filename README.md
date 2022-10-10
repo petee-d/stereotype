@@ -30,9 +30,9 @@ has 100% test coverage.
 - Schematics compatibility field
 
 
-# Tutorial
+## Tutorial
 
-## Atomic value fields
+### Atomic value fields
 
 Here is a simple flat model defined using stereotype:
 ```python
@@ -129,7 +129,7 @@ except ConversionError as e:
 ```
 * `ConversionError`s also have the `errors` property with the same structure of errors, but will only have one error.
 
-## Compound value fields
+### Compound value fields
 
 Fields can also be lists and dictionaries of other fields:
 ```python
@@ -185,7 +185,7 @@ except ValidationError as e:
 * Validation errors in compound fields will be located using nested dictionaries to the individual items.
 
 
-## Deeper structures with model fields
+### Deeper structures with model fields
 
 Models can be used as model fields themselves.
 ```python
@@ -251,3 +251,6 @@ assert model.to_primitive() == {'operands': [
 * Primitive data dictionaries must have a `type` key with one of the `type` attributes in the `Union`.
 * Models can be copied using the `copy` method. Shallow by default, deep if requested.
 * You can use already converted models in the input data (see `equality_copy`). Those will not be copied implicitly.
+
+## Issues & contributing
+Please see the [Contribution guide](https://github.com/petee-d/stereotype/blob/master/CONTRIBUTING.md)

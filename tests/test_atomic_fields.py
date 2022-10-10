@@ -5,7 +5,7 @@ from typing import Optional
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
-    FloatField, StrField, DEFAULT_ROLE
+    FloatField, StrField
 from tests.common import PrivateStrField
 
 

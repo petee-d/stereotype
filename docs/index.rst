@@ -5,6 +5,11 @@ stereotype documentation
    :maxdepth: 2
    :caption: Contents
 
+   model
+   fields
+   utils
+   contrib
+
 -------------------------------
 Reporting issues & contributing
 -------------------------------

@@ -131,7 +131,8 @@ class Field:
                 self.native_validate, self.validator_method, self.validators)
 
     def make_output_config(self) -> _OutputFieldConfig:
-        return (self.name, self.serializable,
+        # Note this isn't expected to be used if to_primitive_name is None
+        return (self, self.name, self.serializable,
                 self.to_primitive if self.custom_to_primitive else None, self.to_primitive_name,
                 self.hide_none, self.hide_empty, self.empty_value)
 

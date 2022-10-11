@@ -153,12 +153,17 @@ class ModelMeta(type):
     def _build_roles(mcs, cls: Type[Model], bases: List[Type[Model]], own_field_names: Set[str]):
         roles = mcs._collect_finalized_roles(cls, bases, own_field_names)
         max_role_code = max((role.code for role in roles.keys()), default=0)
-        default_role_fields = [field.make_output_config() for field in cls.__fields__]
+        default_role_fields = [
+            field.make_output_config() for field in cls.__fields__ if field.to_primitive_name is not None
+        ]
         cls.__role_fields__ = [default_role_fields] * (max_role_code + 1)
         cls.__roles__ = []
 
         for role, finalized in roles.items():
-            field_configs = [field.make_output_config() for field in cls.__fields__ if field.name in finalized.fields]
+            field_configs = [
+                field.make_output_config() for field in cls.__fields__
+                if field.name in finalized.fields and field.to_primitive_name is not None
+            ]
             cls.__role_fields__[role.code] = field_configs
             cls.__roles__.append(finalized)
 

@@ -55,10 +55,10 @@ class Model(metaclass=ModelMeta):
             fields = self.__role_fields__[0]
 
         result = {}
-        for name, serializable, to_primitive, to_primitive_name, hide_none, hide_empty, empty_value in fields:
+        for _, name, serializable, to_primitive, to_primitive_name, hide_none, hide_empty, empty_value in fields:
             if serializable is None:
                 value = getattr(self, name)
-                if value is Missing or to_primitive_name is None:
+                if value is Missing:
                     continue
                 converted = to_primitive(value, role, context) if to_primitive is not None else value
                 if (converted is None and hide_none) or (hide_empty and converted == empty_value):
@@ -188,15 +188,19 @@ class Model(metaclass=ModelMeta):
         return copied
 
     @classmethod
-    def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
-        """Lists the field names (using primitive names, as in serialized data) present for a given role."""
+    def fields_for_role(cls, role: Role = DEFAULT_ROLE) -> List[Field]:
+        """Lists fields present in output for a given role. Omits those suppressed by roles or None primitive_name."""
         if cls.__role_fields__ is NotImplemented:
             cls.__initialize_model__()
         if role.code < len(cls.__role_fields__):
-            fields = cls.__role_fields__[role.code]
+            return [field for field, _, _, _, _, _, _, _ in cls.__role_fields__[role.code]]
         else:
-            fields = [] if role.empty_by_default else cls.__role_fields__[0]
-        return [primitive_name for _, _, _, primitive_name, _, _, _ in fields if primitive_name is not None]
+            return [] if role.empty_by_default else list(cls.__fields__)
+
+    @classmethod
+    def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
+        """Lists the field names (using primitive names, as in serialized data) present for a given role."""
+        return [field.to_primitive_name for field in cls.fields_for_role(role)]
 
 
 _NativeValidator = Callable[[Any, ValidationContextType], Iterable[PathErrorType]]
@@ -220,10 +224,11 @@ _ValidatedFieldConfig = Tuple[
     Optional[Tuple[Validator, ...]],  # validators
 ]
 _OutputFieldConfig = Tuple[
+    Field,
     str,  # name
     Optional[_SerializableFn],  # serializable - if provided, value of the field is extracted by calling this
     Optional[_ToPrimitive],  # to_primitive - if provided, should be called to convert native value to primitive
-    Optional[str],  # to_primitive_name - key used for output, if any
+    Optional[str],  # to_primitive_name - key used for output; in practice, this tuple isn't used if None
     bool,  # hide_none
     bool,  # hide_empty - if True, don't add the key if the value equals empty_value
     Any,  # empty_value

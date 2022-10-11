@@ -1,6 +1,9 @@
 # Changelog
 
 ## v1.3.2
+Features:
+* Added `Model.fields_for_role` class method for inspecting `Field` objects usually displayed by a role
+
 Changes:
 * Added contribution guideline, Makefile and other developer experience improvements
 * Started raising `ConfigurationError` if a `Model` attribute is an explicit `Field` but lacks a type annotation

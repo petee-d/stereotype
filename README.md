@@ -14,20 +14,24 @@ Stereotype supports Python 3.8 and above (future support for older versions of P
 has 100% test coverage.
 
 ## Features
-- Support for atomic fields - `bool`, `int`, `float`, `str`
-- `Optional` for any supported type
-- Fields can also be a `List` of any supported type or a `Dict` of atomic types to any supported type
-- Support for `Model` subclass fields, including recursive definitions
-- Dynamic model fields resolved using a string `type` key
-- Free-form fields using `Any`
-- Calculated `serializable` fields - a `property` present also in serialized data
-- Optional field defaults using atomic values or callables
-- Renaming or disabling fields for purposes of input/output/both
-- Optional hiding of `None` values from output
-- Some built-in validation helpers for most fields
-- Custom validation instance methods with context
-- Serialization roles using field blacklists or whitelists, with inheritance or overriding
-- Schematics compatibility field
+- Fields
+  - All JSON atomic types - `bool`, `int`, `float`, `str`, `Optional[*]`
+  - Compound fields - `List[*]` of any type or a `Dict[*, *]` of atomic types to any type
+  - Model nesting - `Model` subclass fields, including recursive definitions
+  - Dynamic model fields - `Model` subclass fields resolved using a string `type` key
+  - Free-form fields using `Any`
+  - Calculated `serializable` fields - a `property` present also in serialized data
+  - Schematics compatibility field, custom fields can be defined
+- Validation
+  - Basic built-in validation helpers for most fields
+  - Custom field validator callbacks
+  - Custom `Model` instance validation methods
+  - Validation separate from conversion, multiple validation errors reported with paths
+- Conversion & serialization
+  - Optional field defaults using atomic values or callables
+  - Renaming or disabling fields for purposes of input/output/both
+  - Optional hiding of `None` values from output
+  - Serialization roles using field blacklists or whitelists, with inheritance or overriding
 
 
 ## Tutorial

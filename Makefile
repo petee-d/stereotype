@@ -3,6 +3,7 @@
 .PHONY: install
 install:
 	pip install -r requirements_dev.txt
+	pip install -r docs/requirements.txt
 
 .PHONY: lint
 lint:

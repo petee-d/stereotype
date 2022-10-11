@@ -2,6 +2,3 @@ coverage
 flake8
 pytest
 schematics==1.1.3  # For running SchematicsModelField tests
-sphinx
-sphinx-mdinclude
-sphinx-rtd-theme

@@ -1,0 +1,3 @@
+sphinx
+sphinx-mdinclude
+sphinx-rtd-theme

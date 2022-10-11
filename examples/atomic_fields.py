@@ -1,9 +1,7 @@
+# Parts of this file are referenced from docs by line numbers, always update docs after changing it!
+
 from typing import Optional
-
 from stereotype import Model, FloatField, ValidationError, Missing, ConversionError
-
-
-# Keep this file synchronized with the `README.md` documentation!
 
 
 class Employee(Model):
@@ -31,6 +29,7 @@ model.salary = 200000.0
 primitive = model.to_primitive()
 assert primitive == {'name': 'Jane Doe', 'department': 'Engineering', 'female': True, 'salary': 200000.0}
 
+
 model = Employee({'department': None, 'salary': '10'})
 try:
     model.validate()
@@ -46,6 +45,7 @@ assert model.name is Missing
 assert model.department is None
 assert model.salary == 10.0
 assert model.to_primitive() == {'department': None, 'female': None, 'salary': 10.0}
+
 
 try:
     model = Employee({'name': 'Alien', 'female': 'Unknown'})

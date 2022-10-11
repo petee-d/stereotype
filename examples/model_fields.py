@@ -1,7 +1,7 @@
+# Parts of this file are referenced from docs by line numbers, always update docs after changing it!
+
 from __future__ import annotations
-
 from typing import Optional, Any, Union, List
-
 from stereotype import Model
 
 

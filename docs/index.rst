@@ -1,10 +1,15 @@
 stereotype documentation
 ========================
 
+.. mdinclude:: ../README.md
+   :start-line: 2
+   :end-line: 37
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents
 
+   tutorial
    model
    fields
    utils

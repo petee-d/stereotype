@@ -24,7 +24,15 @@ class SerializableField(Field):
 
 def serializable(func: Optional[Callable[[Model], Any]] = None, *, hide_none: bool = False,
                  to_primitive_name: str = Missing):
-    """Decorator that turns properties or methods to output-only fields that are calculated from other fields."""
+    """
+    Decorator that turns properties or methods to output-only fields that are calculated from other fields.
+
+    Will automatically produce a :class:`SerializableField`.
+
+    :param func: The :class:`Model` method or property to be converted to a serializable
+    :param hide_none: If the field's calculated value is None, it will be hidden from serialized output
+    :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+    """
 
     def serializable_wrapper(wrapped_func: Callable[[Model], Any]):
         # Support wrapping properties, this allows for better type checking

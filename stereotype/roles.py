@@ -7,15 +7,18 @@ from stereotype.utils import ConfigurationError
 
 
 class Role:
+    """
+    Declares a serialization role used to exclude some fields. Role objects should usually be global variables.
+    Used in :class:`stereotype.Model` class method :meth:`stereotype.Model.declare_roles` to either
+    blacklist or whitelist that Model's fields.
+
+    :param name: A string representation of this role. Useful for custom field serialization.
+    :param empty_by_default: If true, this role excludes all fields by default.
+    """
+
     __slots__ = ('code', 'name', 'empty_by_default')
 
     def __init__(self, name: str, empty_by_default: bool = False):
-        """
-        Declares a serialization role used to exclude some fields. Role objects should usually be global variables.
-        Used in Model class method `declare_roles` to either blacklist or whitelist that Model's fields.
-        :param name: A string representation of this role. Useful for custom field serialization.
-        :param empty_by_default: If true, this role excludes all fields by default.
-        """
         self.name = name
         self.empty_by_default = empty_by_default
         with _roles_lock:
@@ -23,7 +26,7 @@ class Role:
             _roles.append(self)
 
     def __repr__(self):
-        return f'<Role {self.name}, empty_by_default={self.empty_by_default}, code={self.code}>'
+        return f'<Role {self.name}{", empty by default" if self.empty_by_default else ""}>'
 
     def __hash__(self):
         return self.code
@@ -33,16 +36,18 @@ class Role:
 
     def whitelist(self, *fields, override_parents: bool = False):
         """
-        This role should include only the specified fields of the Model.
-        :param fields: The field descriptors (`cls.field_name`) to include for this role.
+        This role should include only the specified fields of the :class:`stereotype.Model`
+
+        :param fields: The field descriptors (``cls.field_name``) to include for this role.
         :param override_parents: If true, even fields inherited from superclasses are hidden unless specified.
         """
         return RequestedRoleFields(self, fields, is_whitelist=True, override_parents=override_parents)
 
     def blacklist(self, *fields, override_parents: bool = False):
         """
-        This role should omit the specified fields of the Model.
-        :param fields: The field descriptors (`cls.field_name`) to omit for this role.
+        This role should omit the specified fields of the :class:`stereotype.Model`.
+
+        :param fields: The field descriptors (``cls.field_name``) to omit for this role.
         :param override_parents: If true, even fields inherited from superclasses are included unless specified.
         """
         return RequestedRoleFields(self, fields, is_whitelist=False, override_parents=override_parents)

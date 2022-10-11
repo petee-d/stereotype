@@ -11,6 +11,16 @@ from stereotype.utils import Missing, ValidationContextType, PathErrorType, ToPr
 
 
 class SchematicsModelField(ModelField):
+    """
+    Field containing a Schematics ``Model`` class, as specified in the annotation.
+    Provides a way to combine stereotype and schematics models, e.g., for migrating from schematics in steps.
+
+    :param default: Means the field isn't required, should be None or a callable, for example the model's class
+    :param hide_none: If the field's value is None, it will be hidden from serialized output
+    :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+    :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+    """
+
     def __init__(self, *, default: Any = Missing, hide_none: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing):
         super().__init__(default=default, hide_none=hide_none,

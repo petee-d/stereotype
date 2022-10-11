@@ -201,6 +201,6 @@ class TestModels(TestCase):
                          str(ctx.exception))
 
     def test_role_repr(self):
-        self.assertEqual('<Role default, empty_by_default=False, code=0>', repr(DEFAULT_ROLE))
-        self.assertEqual('<Role a, empty_by_default=False, code=1>', repr(ROLE_A))
-        self.assertEqual('<Role b, empty_by_default=True, code=2>', repr(ROLE_B))
+        self.assertEqual('<Role default>', repr(DEFAULT_ROLE))
+        self.assertEqual('<Role a>', repr(ROLE_A))
+        self.assertEqual('<Role b, empty by default>', repr(ROLE_B))

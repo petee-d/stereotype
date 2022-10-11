@@ -2,7 +2,7 @@
 
 [![codecov.io](https://codecov.io/github/petee-d/stereotype/coverage.svg?branch=master)](https://codecov.io/github/petee-d/stereotype)
 
-Stereotype is a performance-focused Python 3.8 library for providing a structure for your data and validating it.
+Stereotype is a performance-focused Python 3.8+ library for providing a structure for your data and validating it.
 The models allow fast & easy conversion between primitive data and well-typed Python classes.
 
 Stereotype is heavily influenced by the beauty of [dataclasses](https://docs.python.org/3/library/dataclasses.html)
@@ -16,7 +16,7 @@ has 100% test coverage.
 ## Features
 - Support for atomic fields - `bool`, `int`, `float`, `str`
 - `Optional` for any supported type
-- Fields with `List`s of any supported type and `Dict`s of atomic types to any supported type
+- Fields can also be a `List` of any supported type or a `Dict` of atomic types to any supported type
 - Support for `Model` subclass fields, including recursive definitions
 - Dynamic model fields resolved using a string `type` key
 - Free-form fields using `Any`

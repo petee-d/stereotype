@@ -4,7 +4,7 @@ from typing import Union, List, Dict, Tuple, cast, Any, Callable
 
 
 class _MissingType:
-    """A special singleton type - only use for the public global Missing object defined below."""
+    """A special singleton type - `Missing` should be the only instance in existence."""
     def __bool__(self):
         return False
 
@@ -18,10 +18,11 @@ class _MissingType:
         return Missing  # Singleton instance, shall not be copied
 
 
-# Placeholder value for required fields (i.e., the field doesn't specify a default, nothing to do with Optional).
-# Validation will always fail if this value is present, i.e. it's never present in valid models.
-# It is a singleton object, no other instances of _MissingType should ever exist.
-# In the unlikely event of needing to check for this value in code, use `model.field is Missing`.
+#: Placeholder value for required fields with missing value
+#: (i.e., the field doesn't specify a default, no relation to ``Optional``).
+#: Validation will always fail if this value is present, i.e. it's never present in valid models.
+#:
+#: In the unlikely event of needing to check for this value in code, use ``model.field is Missing``.
 Missing = _MissingType()
 
 
@@ -49,6 +50,8 @@ Validator = Callable[[Any, ValidationContextType], None]
 
 
 class DataError(StereotypeError):
+    """Encapsulates one or multiple errors that happened during conversion or validation, mapped by field paths."""
+
     error_list: List[PathErrorType]
 
     def __init__(self, errors: List[PathErrorType]):
@@ -64,6 +67,12 @@ class DataError(StereotypeError):
 
     @property
     def errors(self) -> Dict[str, Union[List[str], dict]]:
+        """
+        Generates a potentially deeply nested dictionary with errors and their paths.
+
+        Keys in the dictionaries are field (primitive) names.
+        Values are either lists of error messages from simple fields, or recursive dictionaries for compound fields.
+        """
         errors = {}
         for path, error in self.error_list:
             container = errors
@@ -86,9 +95,9 @@ class DataError(StereotypeError):
         raise type(self)([(path + original_path, error) for original_path, error in self.error_list])
 
 
-class ValidationError(DataError, ValueError):
-    pass
-
-
 class ConversionError(DataError, TypeError):
-    pass
+    """Single error created when converting raw data to a Model, caused mostly by failed type coercions."""
+
+
+class ValidationError(DataError, ValueError):
+    """Potentially multiple errors created when validating already converted models."""

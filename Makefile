@@ -21,3 +21,8 @@ test-coverage:
 
 .PHONY: pr
 pr: lint test-coverage
+
+.PHONY: docs
+docs:
+	sphinx-build -M clean docs docs/_build
+	sphinx-build -M html docs docs/_build

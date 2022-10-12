@@ -108,7 +108,7 @@ Nested structures
 
 Models can be used as model fields themselves.
 
-.. literalinclude:: ../examples/compound_fields.py
+.. literalinclude:: ../examples/model_fields.py
     :language: python
     :lines: 3-26
 

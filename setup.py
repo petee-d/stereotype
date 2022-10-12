@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="stereotype",
-    version="1.3.1",
+    version="1.4.0",
     author="Peter Dolák",
     author_email="peter@dolak.sk",
     description="Models for conversion and validation of rich data structures.",

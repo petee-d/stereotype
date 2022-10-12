@@ -1,9 +1,8 @@
-from typing import List, Dict
+# Parts of this file are referenced from docs by line numbers, always update docs after changing it!
 
+from typing import List, Dict
 from stereotype import Model, ListField, StrField, FloatField, ValidationError, DictField
 
-
-# Keep this file synchronized with the `README.md` documentation!
 
 class Book(Model):
     name: str
@@ -23,6 +22,7 @@ assert model.to_primitive() == {
     'authors': ['Alan A.A. Donovan', 'Brian W. Kernighan'],
     'reviews': {},
 }
+
 
 model = Book({
     'name': "The Hitchhiker's Guide to the Galaxy",

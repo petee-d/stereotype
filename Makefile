@@ -3,6 +3,7 @@
 .PHONY: install
 install:
 	pip install -r requirements_dev.txt
+	pip install -r docs/requirements.txt
 
 .PHONY: lint
 lint:
@@ -21,3 +22,8 @@ test-coverage:
 
 .PHONY: pr
 pr: lint test-coverage
+
+.PHONY: docs
+docs:
+	sphinx-build -M clean docs docs/_build
+	sphinx-build -M html docs docs/_build

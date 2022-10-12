@@ -18,6 +18,17 @@ def field_method_overriden(obj, method_name) -> bool:
 
 
 class Field:
+    """
+    Abstract base class for other field types. Use :class:`AnyField` if type shouldn't be checked.
+
+    :param default: Means the field isn't required, used as default directly or called if callable
+    :param hide_none: If the field's value is None, it will be hidden from serialized output
+    :param hide_empty: If the field's value is empty_value (varies by field type), it will be hidden
+    :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+    :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+    :param validators: Optional list of validator callbacks - they raise ``ValueError`` if the value is invalid
+    """
+
     __slots__ = ('name', 'required', 'allow_none', 'default', 'default_factory', 'native_validate', 'validator_method',
                  'validators', 'hide_none', 'hide_empty', 'primitive_name', 'to_primitive_name', 'serializable',
                  'custom_to_primitive')
@@ -29,15 +40,6 @@ class Field:
     def __init__(self, *, default: Any = Missing, hide_none: bool = False, hide_empty: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  validators: Optional[List[Validator]] = None):
-        """
-        Abstract base class for other field types. Use AnyField if type shouldn't be checked.
-        :param default: Means the field isn't required, used as default directly or called if callable
-        :param hide_none: If the field's value is None, it will be hidden from serialized output
-        :param hide_empty: If the field's value is empty_value (varies by field type), it will be hidden
-        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
-        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
-        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
-        """
         # All NotImplemented *must* be updated later based on annotations
         self.name: str = NotImplemented
         self.allow_none: bool = False
@@ -150,6 +152,17 @@ class Field:
 
 
 class AnyField(Field):
+    """
+    Value of any type (annotation ``typing.Any``).
+
+    :param deep_copy: If true, conversion, serialization and copying will use copy.deepcopy for this value
+    :param default: Means the field isn't required, used as default directly or called if callable
+    :param hide_none: If the field's value is None, it will be hidden from serialized output
+    :param primitive_name: Changes the key used to represent the field in serialized data - input or output
+    :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
+    :param validators: Optional list of validator callbacks - they raise ``ValueError`` if the value is invalid
+    """
+
     __slots__ = Field.__slots__ + ('deep_copy',)
     type_repr: str = 'Any'
     atomic = False
@@ -157,15 +170,6 @@ class AnyField(Field):
     def __init__(self, *, deep_copy: bool = False, default: Any = Missing, hide_none: bool = False,
                  primitive_name: Optional[str] = Missing, to_primitive_name: Optional[str] = Missing,
                  validators: Optional[List[Validator]] = None):
-        """
-        Value of any type (annotation typing.Any).
-        :param deep_copy: If true, conversion, serialization and copying will use copy.deepcopy for this value
-        :param default: Means the field isn't required, used as default directly or called if callable
-        :param hide_none: If the field's value is None, it will be hidden from serialized output
-        :param primitive_name: Changes the key used to represent the field in serialized data - input or output
-        :param to_primitive_name: Changes the key used to represent the field in serialized data - output only
-        :param validators: Optional list of validator callbacks - they receive value and raise ValueError if invalid
-        """
         super().__init__(default=default, hide_none=hide_none,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.deep_copy = deep_copy

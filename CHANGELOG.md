@@ -1,10 +1,11 @@
 # Changelog
 
-## v1.3.2
+## v1.4.0
 Features:
 * Added `Model.fields_for_role` class method for inspecting `Field` objects usually displayed by a role
 
 Changes:
+* Added external documentation using sphinx, simplified README.md
 * Added contribution guideline, Makefile and other developer experience improvements
 * Started raising `ConfigurationError` if a `Model` attribute is an explicit `Field` but lacks a type annotation
 

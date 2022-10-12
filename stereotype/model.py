@@ -9,6 +9,18 @@ from stereotype.utils import Missing, ValidationError, ConversionError, PathErro
 
 
 class Model(metaclass=ModelMeta):
+    """
+    The base class for all your models.
+
+    May inherit from other models, but if inheriting from multiple Models, all but one of the bases must be marked
+    as abstract by adding the attribute ``__abstract__ = True``.
+
+    Class attributes will become fields (deserialized, validated, serialized) if they:
+
+    * are a public attribute (i.e. not prefixed with ``_``)
+    * they have a type hint
+    """
+
     __slots__ = []
     # Don't use these fields in external code directly, they may not be initialized!
     __fields__: List[Field]
@@ -19,8 +31,10 @@ class Model(metaclass=ModelMeta):
 
     def __init__(self, raw_data: Optional[dict] = None):
         """
-        Constructs an instance of this Model from input data, a dictionary.
-        Does not perform validation, but the conversion may raise a ConversionError for a single field with a bad value.
+        Constructs an instance of this Model from input data. Does not perform validation,
+        but the conversion may raise a :class:`ConversionError` for a single field with a bad value.
+
+        :param raw_data: Input data to convert, a dictionary with string keys and values corresponding to the fields.
         """
         if self.__input_fields__ is NotImplemented:
             self.__initialize_model__()
@@ -44,6 +58,7 @@ class Model(metaclass=ModelMeta):
     def to_primitive(self, role: Role = DEFAULT_ROLE, context=None):
         """
         Creates raw data from this Model, creating a copy of the data it was initialized with.
+
         :param role: Can be used together with declare_roles to exclude fields for certain roles.
         :param context: Optional value opaque to stereotype, useful for serializing custom field types.
         """
@@ -71,19 +86,16 @@ class Model(metaclass=ModelMeta):
                 result[to_primitive_name] = value
         return result
 
-    def serialize(self, role: Role = DEFAULT_ROLE, context=None):
-        """
-        Creates raw data from this Model, creating a copy of the data it was initialized with.
-        :param role: Can be used together with declare_roles to exclude fields for certain roles.
-        :param context: Optional value opaque to stereotype, useful for serializing custom field types.
-        """
-        return self.to_primitive(role, context)
+    serialize = to_primitive
 
     def validate(self, context=None):
         """
-        Validates data, raising a ValidationError with potentially multiple error messages, mapped by field paths.
+        Validates data, raising a :class:`ValidationError` with potentially multiple error messages,
+        mapped by field paths.
+
         Validation catches: fields without defaults missing in data, None in non-Optional fields and failing validators
-          - whether native Field validation options or custom validate_* methods.
+        (whether native Field validation options or custom validate_* methods).
+
         :param context: Optional value opaque to stereotype, passed to any custom validation methods (validate_*).
         """
         errors = list(self.validation_errors(context))
@@ -93,8 +105,10 @@ class Model(metaclass=ModelMeta):
     def validation_errors(self, context=None) -> Iterable[PathErrorType]:
         """
         Validates data, yielding errors one by one, each with a field path.
+
         Validation catches: fields without defaults missing in data, None in non-Optional fields and failing validators
-          - whether native Field validation options, custom Field validators or custom validate_* methods.
+        (whether native Field validation options, custom Field validators or custom validate_* methods).
+
         :param context: Optional value opaque to stereotype, passed to Field validators and validate_* Model methods.
         """
         for name, input_name, allow_none, native_validate, validator_method, validators in self.__validated_fields__:
@@ -120,18 +134,20 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def declare_roles(cls) -> Iterable[RequestedRoleFields]:
         """
-        Allows specifying whether a field is serialized for a particular role.
-        Define roles globally, like:    MY_ROLE = Role('my')
-        Then in this class method:      yield MY_ROLE.blacklist(cls.my_field)
+        Override to specify which fields are serialized for particular roles.
+
+        Define a :class:`stereotype.Role` globally, like:  ``MY_ROLE = Role('my')``
+
+        Then in this class method do for example:          ``yield MY_ROLE.blacklist(cls.my_field)``
         """
         yield from ()
 
     @classmethod
     def resolve_extra_types(cls) -> Set[Type[Model]]:
         """
-        Can be used to return a set of symbols that are not available globally in this model's module, such as
-        locally declared other models or models that cannot be imported globally and use `if TYPE_CHECKING`. Simply
-        return any such model classes in this class method, importing it locally if needed.
+        Override to provide a set of symbols that are not available globally in this model's module, such as
+        locally declared other models or models that cannot be imported globally and use ``if TYPE_CHECKING``.
+        Simply return any such model classes in this class method, importing them locally if needed.
         """
         return set()
 
@@ -189,7 +205,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def fields_for_role(cls, role: Role = DEFAULT_ROLE) -> List[Field]:
-        """Lists fields present in output for a given role. Omits those suppressed by roles or None primitive_name."""
+        """
+        Lists fields present in output for a given role. Omits those suppressed by roles or None `primitive_name`.
+
+        :param role: The :class:`Role` that controls which fields are present
+        """
         if cls.__role_fields__ is NotImplemented:
             cls.__initialize_model__()
         if role.code < len(cls.__role_fields__):
@@ -199,7 +219,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def field_names_for_role(cls, role: Role = DEFAULT_ROLE) -> List[str]:
-        """Lists the field names (using primitive names, as in serialized data) present for a given role."""
+        """
+        Lists the field names (using primitive names, as in serialized data) present for a given role.
+
+        :param role: The :class:`Role` that controls which fields are present
+        """
         return [field.to_primitive_name for field in cls.fields_for_role(role)]
 
 

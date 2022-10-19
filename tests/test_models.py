@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy, deepcopy
-from typing import Set, cast, Any, Optional, List, Dict, Union, Type
+from typing import Set, cast, Any, Optional, List, Dict, Union, Type, ClassVar
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
@@ -12,6 +12,8 @@ from tests.common import Leaf
 
 
 class DriedLeaf(Leaf):
+    healthy = False
+    crunchy: ClassVar[bool] = True
     age: float = FloatField(max_value=5, default=0.)
 
 
@@ -27,6 +29,8 @@ class TestModels(TestCase):
         model = DriedLeaf({'color': 'brown'})
         self.assertEqual('brown', model.color)
         self.assertEqual(0, model.age)
+        self.assertIs(False, model.healthy)
+        self.assertIs(True, model.crunchy)
         model.validate()
         self.assertEqual({'color': 'brown', 'age': 0}, model.serialize())
 

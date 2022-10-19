@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Set, Type, TYPE_CHECKING, Optional
+from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Set, Type, TYPE_CHECKING, Optional, \
+    get_origin, ClassVar
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.fields.serializable import SerializableField
-from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields
+from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields, _AbstractMemberDescriptor
 from stereotype.utils import ConfigurationError, Missing
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -37,6 +38,8 @@ class ModelMeta(type):
         }
         if attrs.pop('__abstract__', False):
             attrs['__abstract_slots__'] = all_slots
+            # Without slots there will be no native member_descriptors (needed for declaring roles), supply fake ones
+            attrs.update({field_name: _AbstractMemberDescriptor(field_name) for field_name in field_names})
         else:
             attrs['__slots__'] = [name for name in all_slots if name not in serializable_names]
         attrs['__fields__'] = NotImplemented
@@ -60,6 +63,14 @@ class ModelMeta(type):
     def _iterate_fields(mcs, field_annotations: Dict[str, Any]) -> Iterable[Tuple[str, Any]]:
         for name, annotation in field_annotations.items():
             if name.startswith('_'):
+                continue
+            # Skip attributes with ClassVar annotations - they shouldn't become fields
+            if isinstance(annotation, str):
+                # Delayed annotation; it's not a good time to resolve type hints properly, work with it as a string
+                class_var_prefix = annotation.startswith('ClassVar[') or annotation.startswith('typing.ClassVar[')
+                if class_var_prefix and annotation.endswith(']'):
+                    continue
+            elif get_origin(annotation) is ClassVar:
                 continue
             yield name, annotation
 

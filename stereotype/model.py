@@ -18,7 +18,7 @@ class Model(metaclass=ModelMeta):
     Class attributes will become fields (deserialized, validated, serialized) if they:
 
     * are a public attribute (i.e. not prefixed with ``_``)
-    * they have a type hint
+    * they have a type hint, unless that type hint is wrapped in ``ClassVar``
     """
 
     __slots__ = []

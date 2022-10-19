@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.1
+Features:
+* Model attributes with `ClassVar` won't be interpreted as fields, like in dataclasses
+
+Fixes:
+* Fixed being unable to declare roles for abstract models
+
 ## v1.4.0
 Features:
 * Added `Model.fields_for_role` class method for inspecting `Field` objects usually displayed by a role

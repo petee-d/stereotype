@@ -1,6 +1,6 @@
 # Parts of this file are referenced from docs by line numbers, always update docs after changing it!
 
-from typing import Optional
+from typing import Optional, ClassVar
 from stereotype import Model, FloatField, ValidationError, Missing, ConversionError
 
 
@@ -10,7 +10,9 @@ class Employee(Model):
     female: Optional[bool] = None
     salary: float = FloatField(min_value=42., default=42.)
 
+    # These attributes won't become fields
     human = True
+    alive: ClassVar[bool] = True
 
     def greeting(self) -> str:
         title = {True: "Ms. ", False: "Mr. ", None: ""}[self.female]
@@ -24,6 +26,7 @@ assert model.department == 'Engineering'
 assert model.female is True
 assert model.salary == 150000.0
 assert model.human is True
+assert model.alive is True
 assert model.greeting() == 'Dear Ms. Jane Doe'
 model.salary = 200000.0
 primitive = model.to_primitive()

@@ -67,7 +67,8 @@ class ModelMeta(type):
             # Skip attributes with ClassVar annotations - they shouldn't become fields
             if isinstance(annotation, str):
                 # Delayed annotation; it's not a good time to resolve type hints properly, work with it as a string
-                if annotation.startswith('ClassVar[') and annotation.endswith(']'):
+                class_var_prefix = annotation.startswith('ClassVar[') or annotation.startswith('typing.ClassVar[')
+                if class_var_prefix and annotation.endswith(']'):
                     continue
             elif get_origin(annotation) is ClassVar:
                 continue

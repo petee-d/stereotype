@@ -1,7 +1,8 @@
-from typing import Type, Set
+from typing import Type, Set, Iterable
 from unittest import TestCase
 
-from stereotype import Model, Role, ConfigurationError, DEFAULT_ROLE, IntField, StrField, serializable
+from stereotype import Model, Role, ConfigurationError, DEFAULT_ROLE, IntField, StrField, serializable, \
+    RequestedRoleFields
 from stereotype.fields.serializable import SerializableField
 
 ROLE_A = Role('a')
@@ -172,6 +173,40 @@ class TestModels(TestCase):
         self.assertEqual({'a': {}, 'b': {'b': 7}}, model.serialize(role=ROLE_C))
         self.assertEqual({'a': {'a': 'default'}, 'b': {'a': 'default', 'b': 7}}, model.serialize(role=ROLE_ALL))
         self.assertEqual({}, model.serialize(role=ROLE_NONE))
+
+    def test_abstract_model_roles(self):
+        class Abstract1(Model):
+            __abstract__ = True
+            x: int = 1
+
+            @classmethod
+            def declare_roles(cls) -> Iterable[RequestedRoleFields]:
+                yield ROLE_A.blacklist(cls.x)
+
+        class Abstract2(Abstract1):
+            __abstract__ = True
+            y: str
+
+            @classmethod
+            def declare_roles(cls) -> Iterable[RequestedRoleFields]:
+                yield ROLE_B.whitelist(cls.x, cls.y)
+
+        class Child(Abstract2):
+            z: int = 3
+
+            @classmethod
+            def declare_roles(cls) -> Iterable[RequestedRoleFields]:
+                yield ROLE_C.blacklist(cls.y, cls.z)
+                yield ROLE_ALL.whitelist(cls.x, cls.y, cls.z)
+                yield ROLE_NONE.whitelist(override_parents=True)
+
+        child = Child({"y": "test"})
+        self.assertEqual({'x': 1, 'y': 'test', 'z': 3}, child.to_primitive())
+        self.assertEqual({'y': 'test', 'z': 3}, child.to_primitive(role=ROLE_A))
+        self.assertEqual({'x': 1, 'y': 'test'}, child.to_primitive(role=ROLE_B))
+        self.assertEqual({'x': 1}, child.to_primitive(role=ROLE_C))
+        self.assertEqual({'x': 1, 'y': 'test', 'z': 3}, child.to_primitive(role=ROLE_ALL))
+        self.assertEqual({}, child.to_primitive(role=ROLE_NONE))
 
     def test_role_configuration_error_conflict(self):
         class BadRoles(Model):

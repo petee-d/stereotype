@@ -90,14 +90,25 @@ class RequestedRoleFields:
         self.is_whitelist = is_whitelist
         self.override_parents = override_parents
 
-    def _collect_input_fields(self, fields) -> Tuple[Set[str], List[Any]]:
+    @staticmethod
+    def _collect_input_fields(fields) -> Tuple[Set[str], List[Any]]:
         field_names: Set[str] = set()
         non_descriptors: List[Any] = []
         for field in fields:
             if type(field).__name__ == 'member_descriptor':
                 field_names.add(field.__name__)
+            elif isinstance(field, _AbstractMemberDescriptor):
+                field_names.add(field.name)
             elif isinstance(field, property):
                 field_names.add(field.fget.__name__)
             else:
                 non_descriptors.append(field)
         return field_names, non_descriptors
+
+
+class _AbstractMemberDescriptor:
+    """Stand-in for actual member_descriptor instances in abstract classes"""
+    __slots__ = ['name']
+
+    def __init__(self, name: str):
+        self.name = name

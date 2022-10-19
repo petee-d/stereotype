@@ -5,7 +5,7 @@ from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Set, 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
 from stereotype.fields.serializable import SerializableField
-from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields
+from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields, _AbstractMemberDescriptor
 from stereotype.utils import ConfigurationError, Missing
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -37,6 +37,8 @@ class ModelMeta(type):
         }
         if attrs.pop('__abstract__', False):
             attrs['__abstract_slots__'] = all_slots
+            # Without slots there will be no native member_descriptors (needed for declaring roles), supply fake ones
+            attrs.update({field_name: _AbstractMemberDescriptor(field_name) for field_name in field_names})
         else:
             attrs['__slots__'] = [name for name in all_slots if name not in serializable_names]
         attrs['__fields__'] = NotImplemented

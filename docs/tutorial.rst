@@ -9,7 +9,7 @@ Here is a simple flat model defined using stereotype:
 
 .. literalinclude:: ../examples/atomic_fields.py
     :language: python
-    :lines: 3-17
+    :lines: 3-19
 
 * All models need to inherit from the :ref:`Model` class (directly or indirectly).
 * All public class attributes that have a type annotation (i.e. the attribute name is followed with a colon) will be
@@ -24,7 +24,8 @@ Here is a simple flat model defined using stereotype:
   like some basic validation rules, hiding ``None`` from output, overriding serialization & deserialization names, etc.
 * Fields that don't provide a default (either as the field's assigned value, or using the ``default`` kwarg to a custom
   field) will be required.
-* Attributes without a type annotation will not be treated as fields and are just static class members.
+* Attributes without a type annotation will not be treated as fields and are just static class members. Same applies
+  for attributes with a ``ClassVar`` annotation.
 * Instance methods of a model can use the values freely. Note they may be called even if the model doesn't pass the
   validation rules.
 
@@ -36,7 +37,7 @@ Model instances are created by passing dictionaries. They can then be validated 
 
 .. literalinclude:: ../examples/atomic_fields.py
     :language: python
-    :lines: 20-30
+    :lines: 22-33
 
 * Some amount of conversion will be done automatically - ints to floats, floats without decimals to ints,
   strings to numbers and booleans, anything to strings.
@@ -54,7 +55,7 @@ such as missing required fields and broken validation rules:
 
 .. literalinclude:: ../examples/atomic_fields.py
     :language: python
-    :lines: 33-47
+    :lines: 36-50
 
 * The string representation of a :class:`stereotype.ValidationError` reports the first errors,
   while the ``errors`` property can be used to identify all errors in the model structure, including nested models.
@@ -72,7 +73,7 @@ Conversion errors are raised during model initialization if the input to a model
 
 .. literalinclude:: ../examples/atomic_fields.py
     :language: python
-    :lines: 50-53
+    :lines: 53-56
 
 * :class:`stereotype.ConversionError` also has the ``errors`` property with the same structure of errors,
   but will only have one error.

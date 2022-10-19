@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Set, Type, TYPE_CHECKING, Optional
+from typing import Dict, Any, Iterable, Tuple, get_type_hints, cast, List, Set, Type, TYPE_CHECKING, Optional, \
+    get_origin, ClassVar
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
@@ -62,6 +63,13 @@ class ModelMeta(type):
     def _iterate_fields(mcs, field_annotations: Dict[str, Any]) -> Iterable[Tuple[str, Any]]:
         for name, annotation in field_annotations.items():
             if name.startswith('_'):
+                continue
+            # Skip attributes with ClassVar annotations - they shouldn't become fields
+            if isinstance(annotation, str):
+                # Delayed annotation; it's not a good time to resolve type hints properly, work with it as a string
+                if annotation.startswith('ClassVar[') and annotation.endswith(']'):
+                    continue
+            elif get_origin(annotation) is ClassVar:
                 continue
             yield name, annotation
 

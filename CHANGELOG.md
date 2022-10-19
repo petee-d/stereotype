@@ -1,6 +1,9 @@
 # Changelog
 
 ## v1.4.1
+Features:
+* Model attributes with `ClassVar` won't be interpreted as fields, like in dataclasses
+
 Fixes:
 * Fixed being unable to declare roles for abstract models
 

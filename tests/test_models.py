@@ -300,6 +300,72 @@ class TestModels(TestCase):
             Bad()
         self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))
 
+    def test_inheritance_from_non_model(self):
+        class NonModel:
+            some_attribute: str = "abc"
+
+        class BaseModel(Model):
+            x: int
+
+        class MyModel(BaseModel, NonModel):
+            some_field: str = "xyz"
+
+        model = MyModel({"some_attribute": "ignore me", "x": 42})
+        self.assertEqual("abc", model.some_attribute)
+        self.assertEqual(42, model.x)
+        self.assertEqual("xyz", model.some_field)
+        model.validate()
+        self.assertEqual({"x": 42, "some_field": "xyz"}, model.serialize())
+
+    def test_abstract_model_from_concrete_with_slots(self):
+        class Concrete(Model):
+            x: int
+
+        class Abstract(Concrete):
+            __abstract__ = True
+            __slots__ = ['a']
+            y: float
+
+        class AnotherConcrete(Concrete):
+            __slots__ = ['b']
+            z: str
+
+        class Merged(Abstract, AnotherConcrete):
+            __slots__ = ['c']
+
+        model = Merged({'x': 1.0, 'y': 2, 'z': 3, 'a': 'ignore'})
+        self.assertEqual(1, model.x)
+        self.assertEqual(2.0, model.y)
+        self.assertEqual('3', model.z)
+        model.a = model.b = model.c = 'have slots'
+        self.assertEqual('have slots', model.a)
+        self.assertEqual('have slots', model.b)
+        self.assertEqual('have slots', model.c)
+        self.assertEqual({'x': 1, 'y': 2.0, 'z': '3'}, model.to_primitive())
+
+    def test_resolve_extra_types_inheritance(self):
+        class A(Model):
+            a: int = 1
+
+        class B(Model):
+            b: float = 2.
+
+        class X(Model):
+            a: A = A
+
+            @classmethod
+            def resolve_extra_types(cls) -> Set[Type[Model]]:
+                return {A}
+
+        class Y(X):
+            b: B = B
+
+            @classmethod
+            def resolve_extra_types(cls) -> Set[Type[Model]]:
+                return {B} | super().resolve_extra_types()
+
+        self.assertEqual({'a': {'a': 1}, 'b': {'b': 2}}, Y().to_primitive())
+
     def test_missing_singleton_copy(self):
         class ProduceMissing(Model):
             required: int

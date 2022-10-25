@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.2
+Fixes:
+* Fixed being unable to inherit from non-Model classes
+* Fixed inheritance of abstract Models from non-abstract Models
+
 ## v1.4.1
 Features:
 * Model attributes with `ClassVar` won't be interpreted as fields, like in dataclasses

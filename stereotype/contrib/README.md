@@ -57,11 +57,11 @@ highlighting the key differences and showing how the concepts translate.
 
 * The first step is to change imports to import `Model` from `stereotype` instead of `schematics`
 * Fields
-  * Whereas type-annotating fields when using Schematics is just a good practice, it's mandatory with `stereotype`
-  * Explicit fields are **not needed** if the Schematics field supplied only the `required` or `default` options
+  * Whereas **type-annotating fields** when using Schematics is just a good practice, it's **mandatory** with stereotype
+  * **Explicit fields are not needed** if the Schematics field supplied only the `required` or `default` options
     * This is because stereotype usually infers the type information (incl. whether `None` is allowed) from the 
-      type annotation, whereas the default can be supplied instead of the `*Field` if no other options are needed
-      - see below
+      type annotation, whereas the default can be supplied instead of the `*Field` if no other options are
+      needed - see below
   * Otherwise, change the fields from Schematics `*Type` to stereotype `*Field` classes like this:
     * `typing.Any` = `BaseType()` -> `AnyField()`
       * Usable when type validation is not desired
@@ -77,9 +77,10 @@ highlighting the key differences and showing how the concepts translate.
         stereotype will infer the inner field from the annotation even recursively
     * `typing.Dict[<key>, <value>]` = `DictType(<value_type>)` -> `DictField(<key_type>, <value_type>)`
       * Validator names are different - `min_size` -> `min_length` and `max_size` -> `max_length`
-  * Instead of using the `required` Schematics option, use `Optional[...]` in the type annotation if `required=False`
-    * If this isn't used, fields will reject `None` during validation
-  * Schematics uses `None` as the default unless otherwise specified, defaults in stereotype are explicit
+  * Unlike Schematics, **stereotype fields don't allow None by default**
+    * Where the Schematics model had `required=False` (the default), make the type annotation `Optional[...]`
+    * If `Optional` isn't used, fields will reject `None` during validation
+  * Schematics uses `None` as the default unless otherwise specified, **defaults in stereotype must be explicit**
     * If no default is specified for a stereotype field, conversion will fill in the `stereotype.Missing` placeholder
       * Validation will fail for all `Missing` fields, serialization will omit them, but they can be encountered when
         accessing attributes of model that doesn't pass validation

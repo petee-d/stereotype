@@ -3,6 +3,7 @@
 ## v1.4.2
 Fixes:
 * Fixed being unable to inherit from non-Model classes
+* Fixed inheritance of abstract Models from non-abstract Models
 
 ## v1.4.1
 Features:

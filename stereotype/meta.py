@@ -29,26 +29,27 @@ class ModelMeta(type):
 
         # Find serializable, keep them in `attrs` as they need to remain as properties
         serializable_names = {name for name, _ in mcs._iterate_serializable(attrs)}
+        own_field_names = set(field_names) | serializable_names
 
         # Using dicts instead of sets to preserve order
-        all_slots = {
+        attrs['__abstract_slots__'] = all_slots = [slot for slot in {
             **{slot: 0 for slot in mcs._iterate_base_fields(bases)},
             **{slot: 1 for slot in field_names},
             **{slot: 2 for slot in attrs.get('__slots__', ())},
-        }
-        if attrs.pop('__abstract__', False):
-            attrs['__abstract_slots__'] = all_slots
+        } if slot not in serializable_names]
+
+        if attrs.get('__abstract__', False):
+            attrs.pop('__slots__', None)
             # Without slots there will be no native member_descriptors (needed for declaring roles), supply fake ones
             attrs.update({field_name: _AbstractMemberDescriptor(field_name) for field_name in field_names})
         else:
-            attrs['__slots__'] = [name for name in all_slots if name not in serializable_names]
+            attrs['__slots__'] = all_slots
+
         attrs['__fields__'] = NotImplemented
         attrs['__input_fields__'] = NotImplemented
         attrs['__validated_fields__'] = NotImplemented
         attrs['__role_fields__'] = NotImplemented
         attrs['__roles__'] = NotImplemented
-
-        own_field_names = set(field_names) | serializable_names
 
         try:
             cls = cast(Type['Model'], type.__new__(mcs, name, bases, attrs))
@@ -80,11 +81,7 @@ class ModelMeta(type):
         for base in bases:
             if not issubclass(base, Model):
                 continue
-            yield from mcs._get_model_slots(base)
-
-    @staticmethod
-    def _get_model_slots(cls: Type[Model]) -> Iterable[str]:
-        return getattr(cls, '__slots__', ()) or getattr(cls, '__abstract_slots__', ())
+            yield from getattr(base, '__abstract_slots__', ())
 
     @classmethod
     def _check_explicit_field_annotations(mcs, cls_name: str, field_names: Set[str], attrs: Dict[str, Any]):
@@ -120,7 +117,7 @@ class ModelMeta(type):
 
     @classmethod
     def _analyze_fields(mcs, cls: Type[Model], field_values: dict) -> Iterable[Field]:
-        all_field_names = set(mcs._get_model_slots(cls))
+        all_field_names = set(getattr(cls, '__abstract_slots__', ()))
         for name, annotation in mcs._resolve_annotations(cls).items():
             if name not in all_field_names:
                 continue

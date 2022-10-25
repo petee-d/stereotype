@@ -317,6 +317,32 @@ class TestModels(TestCase):
         model.validate()
         self.assertEqual({"x": 42, "some_field": "xyz"}, model.serialize())
 
+    def test_abstract_model_from_concrete_with_slots(self):
+        class Concrete(Model):
+            x: int
+
+        class Abstract(Concrete):
+            __abstract__ = True
+            __slots__ = ['a']
+            y: float
+
+        class AnotherConcrete(Concrete):
+            __slots__ = ['b']
+            z: str
+
+        class Merged(Abstract, AnotherConcrete):
+            __slots__ = ['c']
+
+        model = Merged({'x': 1.0, 'y': 2, 'z': 3, 'a': 'ignore'})
+        self.assertEqual(1, model.x)
+        self.assertEqual(2.0, model.y)
+        self.assertEqual('3', model.z)
+        model.a = model.b = model.c = 'have slots'
+        self.assertEqual('have slots', model.a)
+        self.assertEqual('have slots', model.b)
+        self.assertEqual('have slots', model.c)
+        self.assertEqual({'x': 1, 'y': 2.0, 'z': '3'}, model.to_primitive())
+
     def test_missing_singleton_copy(self):
         class ProduceMissing(Model):
             required: int

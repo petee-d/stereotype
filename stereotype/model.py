@@ -148,6 +148,8 @@ class Model(metaclass=ModelMeta):
         Override to provide a set of symbols that are not available globally in this model's module, such as
         locally declared other models or models that cannot be imported globally and use ``if TYPE_CHECKING``.
         Simply return any such model classes in this class method, importing them locally if needed.
+
+        If inheriting from a Model that implements this, use ``return {...} | super().resolve_extra_types()``
         """
         return set()
 

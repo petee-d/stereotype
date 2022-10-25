@@ -343,6 +343,29 @@ class TestModels(TestCase):
         self.assertEqual('have slots', model.c)
         self.assertEqual({'x': 1, 'y': 2.0, 'z': '3'}, model.to_primitive())
 
+    def test_resolve_extra_types_inheritance(self):
+        class A(Model):
+            a: int = 1
+
+        class B(Model):
+            b: float = 2.
+
+        class X(Model):
+            a: A = A
+
+            @classmethod
+            def resolve_extra_types(cls) -> Set[Type[Model]]:
+                return {A}
+
+        class Y(X):
+            b: B = B
+
+            @classmethod
+            def resolve_extra_types(cls) -> Set[Type[Model]]:
+                return {B} | super().resolve_extra_types()
+
+        self.assertEqual({'a': {'a': 1}, 'b': {'b': 2}}, Y().to_primitive())
+
     def test_missing_singleton_copy(self):
         class ProduceMissing(Model):
             required: int

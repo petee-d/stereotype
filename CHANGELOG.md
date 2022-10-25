@@ -4,6 +4,7 @@
 Fixes:
 * Fixed being unable to inherit from non-Model classes
 * Fixed inheritance of abstract Models from non-abstract Models
+* Fixed support of new Union (`|`) and `list` & `dict` annotations in Python 3.10 and above
 
 ## v1.4.1
 Features:

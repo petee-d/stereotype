@@ -300,6 +300,23 @@ class TestModels(TestCase):
             Bad()
         self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))
 
+    def test_inheritance_from_non_model(self):
+        class NonModel:
+            some_attribute: str = "abc"
+
+        class BaseModel(Model):
+            x: int
+
+        class MyModel(BaseModel, NonModel):
+            some_field: str = "xyz"
+
+        model = MyModel({"some_attribute": "ignore me", "x": 42})
+        self.assertEqual("abc", model.some_attribute)
+        self.assertEqual(42, model.x)
+        self.assertEqual("xyz", model.some_field)
+        model.validate()
+        self.assertEqual({"x": 42, "some_field": "xyz"}, model.serialize())
+
     def test_missing_singleton_copy(self):
         class ProduceMissing(Model):
             required: int

@@ -19,7 +19,7 @@ class ModelMeta(type):
             return type.__new__(mcs, name, bases, attrs)
 
         # Only annotated attributes iterated here for the purposes of slots, not serializable fields
-        field_names = [name for name, annotation in mcs._iterate_fields(attrs.get('__annotations__', {}))]
+        field_names = list(mcs._iterate_own_fields(attrs.get('__annotations__', {})))
         mcs._check_explicit_field_annotations(name, set(field_names), attrs)
         field_values = {}
         for field_name in field_names:
@@ -32,7 +32,7 @@ class ModelMeta(type):
 
         # Using dicts instead of sets to preserve order
         all_slots = {
-            **{slot: 0 for parent in bases for slot in parent.__slots__ or getattr(parent, '__abstract_slots__', ())},
+            **{slot: 0 for slot in mcs._iterate_base_fields(bases)},
             **{slot: 1 for slot in field_names},
             **{slot: 2 for slot in attrs.get('__slots__', ())},
         }
@@ -60,10 +60,10 @@ class ModelMeta(type):
         return cls
 
     @classmethod
-    def _iterate_fields(mcs, field_annotations: Dict[str, Any]) -> Iterable[Tuple[str, Any]]:
+    def _iterate_own_fields(mcs, field_annotations: Dict[str, Any]) -> Iterable[str]:
         for name, annotation in field_annotations.items():
             if name.startswith('_'):
-                continue
+                continue  # Private attributes won't become fields
             # Skip attributes with ClassVar annotations - they shouldn't become fields
             if isinstance(annotation, str):
                 # Delayed annotation; it's not a good time to resolve type hints properly, work with it as a string
@@ -72,7 +72,19 @@ class ModelMeta(type):
                     continue
             elif get_origin(annotation) is ClassVar:
                 continue
-            yield name, annotation
+            yield name
+
+    @classmethod
+    def _iterate_base_fields(mcs, bases: Tuple[type, ...]) -> Iterable[str]:
+        from stereotype.model import Model
+        for base in bases:
+            if not issubclass(base, Model):
+                continue
+            yield from mcs._get_model_slots(base)
+
+    @staticmethod
+    def _get_model_slots(cls: Type[Model]) -> Iterable[str]:
+        return getattr(cls, '__slots__', ()) or getattr(cls, '__abstract_slots__', ())
 
     @classmethod
     def _check_explicit_field_annotations(mcs, cls_name: str, field_names: Set[str], attrs: Dict[str, Any]):
@@ -102,13 +114,17 @@ class ModelMeta(type):
         for base in model_bases:
             if base.__fields__ is NotImplemented:
                 base.__initialize_model__()
-            for field in cast(List[Field], base.__fields__):
+            for field in base.__fields__:
                 if field.name not in own_field_names:
                     field_values[field.name] = field
 
     @classmethod
     def _analyze_fields(mcs, cls: Type[Model], field_values: dict) -> Iterable[Field]:
-        for name, annotation in mcs._iterate_fields(mcs._resolve_annotations(cls)):
+        all_field_names = set(mcs._get_model_slots(cls))
+        for name, annotation in mcs._resolve_annotations(cls).items():
+            if name not in all_field_names:
+                continue
+
             explicit_field: Optional[Field] = None
             default = Missing
             if name in field_values:

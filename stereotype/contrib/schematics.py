@@ -1,7 +1,12 @@
 from copy import deepcopy
 from typing import Any, Optional, Type, cast, Iterable
 
-from schematics.exceptions import ValidationError as SchematicsValidationError
+try:
+    # Schematics 2
+    from schematics.exceptions import CompoundError as SchematicsValidationError
+except ImportError:
+    # Schematics 1
+    from schematics.exceptions import ValidationError as SchematicsValidationError
 from schematics.models import Model as SchematicsModel
 
 from stereotype.fields.annotations import AnnotationResolver
@@ -14,6 +19,7 @@ class SchematicsModelField(ModelField):
     """
     Field containing a Schematics ``Model`` class, as specified in the annotation.
     Provides a way to combine stereotype and schematics models, e.g., for migrating from schematics in steps.
+    Deep copy doesn't work in Schematics 2, works in Schematics 1.
 
     :param default: Means the field isn't required, should be None or a callable, for example the model's class
     :param hide_none: If the field's value is None, it will be hidden from serialized output
@@ -38,7 +44,9 @@ class SchematicsModelField(ModelField):
         try:
             value.validate()  # Cannot propagate the context to schematics
         except SchematicsValidationError as e:
-            yield from _iterate_validation_errors(e.messages)
+            # to_primitive works for Schematics 2, messages for Schematics 1
+            messages = e.to_primitive() if hasattr(e, 'to_primitive') else e.messages
+            yield from _iterate_validation_errors(messages)
 
     def copy_value(self, value: Any) -> Any:
         if value is None or value is Missing:

@@ -42,7 +42,9 @@ class AnnotationResolver:
         self.origin = get_origin(self.annotation)
 
     def __repr__(self):
-        return self.annotation.__name__ if hasattr(self.annotation, '__name__') else repr(self.annotation)
+        if self.origin is None and hasattr(self.annotation, '__name__'):
+            return self.annotation.__name__
+        return repr(self.annotation)
 
     def resolve(self, explict_field: Optional[Field] = None) -> Field:
         if explict_field is None or explict_field is NotImplemented:

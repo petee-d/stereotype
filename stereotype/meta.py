@@ -133,13 +133,13 @@ class ModelMeta(type):
 
             try:
                 field = AnnotationResolver(annotation).resolve(explict_field=explicit_field)
+                field.init_name(name)
+                if default is not Missing:
+                    field.init_default(default)
+                # Note a default could have also been present in the explicit field
+                field.check_default()
             except ConfigurationError as e:
-                raise ConfigurationError(f'Field {name}: {e}')
-            field.init_name(name)
-            if default is not Missing:
-                field.init_default(default)
-            # Note a default could have also been present in the explicit field
-            field.check_default()
+                raise ConfigurationError(f"Field {name} of {cls.__name__}: {e}")
 
             validator_method = getattr(cls, f'validate_{name}', None)
             if validator_method is not None:

@@ -173,8 +173,8 @@ class TestListType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field mismatch: ListField cannot be used for annotation typing.Dict[str, '
-                         'tests.test_compound_fields.MyStrModel], should use DictField', str(ctx.exception))
+        self.assertEqual("Field mismatch of Bad: ListField cannot be used for annotation typing.Dict[str, "
+                         "tests.test_compound_fields.MyStrModel], should use DictField", str(ctx.exception))
 
     def test_configuration_error_list_item_mismatch(self):
         class Bad(Model):
@@ -182,7 +182,7 @@ class TestListType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field worse: StrField cannot be used for annotation bool, should use BoolField',
+        self.assertEqual("Field worse of Bad: StrField cannot be used for annotation bool, should use BoolField",
                          str(ctx.exception))
 
     def test_to_primitive_context(self):
@@ -386,8 +386,8 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field mismatch: DictField cannot be used for annotation '
-                         'typing.List[tests.test_compound_fields.MyStrModel], should use ListField', str(ctx.exception))
+        self.assertEqual("Field mismatch of Bad: DictField cannot be used for annotation "
+                         "typing.List[tests.test_compound_fields.MyStrModel], should use ListField", str(ctx.exception))
 
     def test_configuration_error_invalid_key(self):
         class InvalidKey(Model):
@@ -395,8 +395,8 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             InvalidKey()
-        self.assertEqual('Field bad: DictField keys may only be booleans, numbers or strings: '
-                         'typing.Dict[tests.test_compound_fields.MyStrModel, bool]', str(ctx.exception))
+        self.assertEqual("Field bad of InvalidKey: DictField keys may only be booleans, numbers or strings: "
+                         "typing.Dict[tests.test_compound_fields.MyStrModel, bool]", str(ctx.exception))
 
     def test_configuration_error_dict_key_mismatch(self):
         class Bad(Model):
@@ -404,7 +404,7 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field bad: FloatField cannot be used for annotation int, should use IntField',
+        self.assertEqual("Field bad of Bad: FloatField cannot be used for annotation int, should use IntField",
                          str(ctx.exception))
 
     def test_configuration_error_dict_value_mismatch(self):
@@ -413,7 +413,7 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field worse: ModelField cannot be used for annotation bool, should use BoolField',
+        self.assertEqual("Field worse of Bad: ModelField cannot be used for annotation bool, should use BoolField",
                          str(ctx.exception))
 
     def test_to_primitive_context(self):

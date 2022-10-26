@@ -130,7 +130,7 @@ class TestSchematicsModelField(TestCase):
             worse: Outer = Outer
         with self.assertRaises(ConfigurationError) as e:
             Bad()
-        self.assertEqual("Field worse: Unrecognized field annotation Outer (may need an explicit Field)",
+        self.assertEqual("Field worse of Bad: Unrecognized field annotation Outer (may need an explicit Field)",
                          str(e.exception))
 
     def test_configuration_error_mismatch(self):
@@ -138,8 +138,8 @@ class TestSchematicsModelField(TestCase):
             worse: Root = SchematicsModelField()
         with self.assertRaises(ConfigurationError) as e:
             Bad()
-        self.assertEqual("Field worse: SchematicsModelField cannot be used for annotation Root, should use ModelField",
-                         str(e.exception))
+        self.assertEqual("Field worse of Bad: SchematicsModelField cannot be used for annotation Root, "
+                         "should use ModelField", str(e.exception))
 
     def test_to_primitive_context(self):
         root = Root({

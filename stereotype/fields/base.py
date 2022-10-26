@@ -88,7 +88,7 @@ class Field:
             pass
         elif self.default is None:
             if not self.allow_none:
-                raise ConfigurationError(f'Field `{self.name}` is not Optional and cannot use None as default')
+                raise ConfigurationError(f'Cannot use None as default on a non-Optional Field')
         elif self.type is not NotImplemented and not isinstance(self.default, self.type):
             raise ConfigurationError(f'Value `{self.default}` used as field default must be of type {self.type_repr}')
 

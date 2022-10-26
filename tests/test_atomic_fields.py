@@ -89,7 +89,8 @@ class TestBooleanField(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             NotBool()
-        self.assertEqual('Value `42` used as field default must be of type bool', str(ctx.exception))
+        self.assertEqual("Field value of NotBool: Value `42` used as field default must be of type bool",
+                         str(ctx.exception))
 
 
 def is_even(value, context):
@@ -173,14 +174,16 @@ class TestIntField(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             NotInt()
-        self.assertEqual('Value `4.2` used as field default must be of type int', str(ctx.exception))
+        self.assertEqual("Field field of NotInt: Value `4.2` used as field default must be of type int",
+                         str(ctx.exception))
 
         class NotOptional(Model):
             field: int = None
 
         with self.assertRaises(ConfigurationError) as ctx:
             NotOptional()
-        self.assertEqual('Field `field` is not Optional and cannot use None as default', str(ctx.exception))
+        self.assertEqual("Field field of NotOptional: Cannot use None as default on a non-Optional Field",
+                         str(ctx.exception))
 
     def test_hidden_figures(self):
         class Hidden(Model):
@@ -267,7 +270,7 @@ class TestFloatField(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Mismatch({'my_name': 5})
-        self.assertEqual("Field my_name: FloatField cannot be used for annotation int, should use IntField",
+        self.assertEqual("Field my_name of Mismatch: FloatField cannot be used for annotation int, should use IntField",
                          str(ctx.exception))
 
     def test_hidden_figures(self):

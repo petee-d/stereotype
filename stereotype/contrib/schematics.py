@@ -33,7 +33,6 @@ class SchematicsModelField(ModelField):
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name)
 
         self.type: Type[SchematicsModel] = cast(Type[SchematicsModel], NotImplemented)
-        self.native_validate = self.validate
 
     def init_from_annotation(self, parser: AnnotationResolver):
         if not issubclass(parser.annotation, SchematicsModel):

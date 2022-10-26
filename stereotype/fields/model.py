@@ -32,7 +32,6 @@ class ModelField(Field):
         super().__init__(default=default, hide_none=hide_none, hide_empty=hide_empty,
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.type: Type[Model] = cast(Type[Model], NotImplemented)
-        self.native_validate = self.validate
 
     def init_from_annotation(self, parser: AnnotationResolver):
         if not issubclass(parser.annotation, Model):
@@ -93,7 +92,6 @@ class DynamicModelField(Field):
                          primitive_name=primitive_name, to_primitive_name=to_primitive_name, validators=validators)
         self.types: Tuple[Type[Model], ...] = NotImplemented
         self.type_map: Dict[str, Type[Model]] = NotImplemented
-        self.native_validate = self.validate
 
     def init_from_annotation(self, parser: AnnotationResolver):
         if not parser.is_union_origin():

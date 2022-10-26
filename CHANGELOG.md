@@ -10,6 +10,7 @@ Changes:
 Fixes:
 * Fixed being unable to inherit from non-Model classes
 * Fixed inheritance of abstract Models from non-abstract Models
+* Fixed field validator callbacks not executing within compound field items
 
 ## v1.4.1
 Features:

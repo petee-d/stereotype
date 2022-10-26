@@ -140,12 +140,12 @@ class TestIntField(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
         self.assertEqual({
-            'even': ['Even an even number cannot be above max', 'Must be an even number'],
+            'even': ['Must be an even number', 'Even an even number cannot be above max'],
         }, ctx.exception.errors)
         with self.assertRaises(ValidationError) as ctx:
             model.validate("integer")
         self.assertEqual({
-            'even': ['Even an even integer cannot be above max', 'Must be an even integer'],
+            'even': ['Must be an even integer', 'Even an even integer cannot be above max'],
         }, ctx.exception.errors)
 
     def test_conversion_errors(self):
@@ -167,6 +167,15 @@ class TestIntField(TestCase):
         self.assertEqual(8, model.min_max)
         model.validate()
         self.assertEqual({'norm': 42, 'min': 4, 'max': None, 'min_max': 8}, model.serialize())
+
+        with self.assertRaises(ValidationError) as ctx:
+            IntModel({'min': None, 'min_max': None, 'even': None}).validate()
+        self.assertEqual({
+            'min': ['This field is required'],
+            'max': ['This field is required'],
+            'min_max': ['This field is required'],
+            'even': ['This field is required'],
+        }, ctx.exception.errors)
 
     def test_bad_default(self):
         class NotInt(Model):

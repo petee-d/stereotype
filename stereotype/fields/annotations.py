@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 try:
     _py310_union_type = types.UnionType  # Python 3.10 or above
-except AttributeError:
+except AttributeError:  # pragma: no cover
     _py310_union_type = NotImplemented  # Python 3.9 or below
 
 

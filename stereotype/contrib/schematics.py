@@ -4,7 +4,7 @@ from typing import Any, Optional, Type, cast, Iterable
 try:
     # Schematics 2
     from schematics.exceptions import CompoundError as SchematicsValidationError
-except ImportError:
+except ImportError:  # pragma: no cover
     # Schematics 1
     from schematics.exceptions import ValidationError as SchematicsValidationError
 from schematics.models import Model as SchematicsModel

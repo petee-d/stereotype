@@ -1,10 +1,17 @@
 from __future__ import annotations
+
+import types
 from typing import Any, Optional, TYPE_CHECKING, Union, get_origin, get_args
 
 from stereotype.utils import ConfigurationError
 
 if TYPE_CHECKING:  # pragma: no cover
     from stereotype.fields.base import Field
+
+try:
+    _py310_union_type = types.UnionType  # Python 3.10 or above
+except AttributeError:
+    _py310_union_type = NotImplemented  # Python 3.9 or below
 
 
 class AnnotationResolver:
@@ -18,7 +25,7 @@ class AnnotationResolver:
         self._unwrap_optional()
 
     def _unwrap_optional(self):
-        if self.origin is not Union:
+        if not self.is_union_origin():
             return
 
         options = get_args(self.annotation)
@@ -56,7 +63,7 @@ class AnnotationResolver:
                 return ListField()
             if self.origin is dict:
                 return DictField()
-            if self.origin is Union:
+            if self.is_union_origin():
                 return DynamicModelField()  # Cannot be Optional at this point, taken care of in init
         elif self.annotation is Any:
             return AnyField()
@@ -68,6 +75,9 @@ class AnnotationResolver:
             return ModelField()
 
         raise ConfigurationError(f'Unrecognized field annotation {self!r} (may need an explicit Field)')
+
+    def is_union_origin(self):
+        return self.origin is Union or (_py310_union_type is not NotImplemented and self.origin is _py310_union_type)
 
     def incorrect_type(self, field: Field) -> ConfigurationError:
         hint = ''

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast, Union, get_args, List
+from typing import Any, Optional, Type, Iterable, Tuple, Dict, cast, get_args, List
 
 from stereotype.fields.annotations import AnnotationResolver
 from stereotype.fields.base import Field
@@ -96,7 +96,7 @@ class DynamicModelField(Field):
         self.native_validate = self.validate
 
     def init_from_annotation(self, parser: AnnotationResolver):
-        if parser.origin is not Union:
+        if not parser.is_union_origin():
             raise parser.incorrect_type(self)
         options = get_args(parser.annotation)
 

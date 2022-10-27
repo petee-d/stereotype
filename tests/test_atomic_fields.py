@@ -89,7 +89,8 @@ class TestBooleanField(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             NotBool()
-        self.assertEqual('Value `42` used as field default must be of type bool', str(ctx.exception))
+        self.assertEqual("Field value of NotBool: Value `42` used as field default must be of type bool",
+                         str(ctx.exception))
 
 
 def is_even(value, context):
@@ -139,12 +140,12 @@ class TestIntField(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
         self.assertEqual({
-            'even': ['Even an even number cannot be above max', 'Must be an even number'],
+            'even': ['Must be an even number', 'Even an even number cannot be above max'],
         }, ctx.exception.errors)
         with self.assertRaises(ValidationError) as ctx:
             model.validate("integer")
         self.assertEqual({
-            'even': ['Even an even integer cannot be above max', 'Must be an even integer'],
+            'even': ['Must be an even integer', 'Even an even integer cannot be above max'],
         }, ctx.exception.errors)
 
     def test_conversion_errors(self):
@@ -167,20 +168,31 @@ class TestIntField(TestCase):
         model.validate()
         self.assertEqual({'norm': 42, 'min': 4, 'max': None, 'min_max': 8}, model.serialize())
 
+        with self.assertRaises(ValidationError) as ctx:
+            IntModel({'min': None, 'min_max': None, 'even': None}).validate()
+        self.assertEqual({
+            'min': ['This field is required'],
+            'max': ['This field is required'],
+            'min_max': ['This field is required'],
+            'even': ['This field is required'],
+        }, ctx.exception.errors)
+
     def test_bad_default(self):
         class NotInt(Model):
             field: int = 4.2
 
         with self.assertRaises(ConfigurationError) as ctx:
             NotInt()
-        self.assertEqual('Value `4.2` used as field default must be of type int', str(ctx.exception))
+        self.assertEqual("Field field of NotInt: Value `4.2` used as field default must be of type int",
+                         str(ctx.exception))
 
         class NotOptional(Model):
             field: int = None
 
         with self.assertRaises(ConfigurationError) as ctx:
             NotOptional()
-        self.assertEqual('Field `field` is not Optional and cannot use None as default', str(ctx.exception))
+        self.assertEqual("Field field of NotOptional: Cannot use None as default on a non-Optional Field",
+                         str(ctx.exception))
 
     def test_hidden_figures(self):
         class Hidden(Model):
@@ -267,7 +279,7 @@ class TestFloatField(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Mismatch({'my_name': 5})
-        self.assertEqual("Field my_name: FloatField cannot be used for annotation int, should use IntField",
+        self.assertEqual("Field my_name of Mismatch: FloatField cannot be used for annotation int, should use IntField",
                          str(ctx.exception))
 
     def test_hidden_figures(self):

@@ -80,13 +80,10 @@ class ListField(_CompoundField):
 
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)
-        item_field = self.item_field
+        item_validator = self.item_field.validation_errors
         for index, item in enumerate(value):
-            if item is Missing or (item is None and not item_field.allow_none):
-                yield (str(index),), 'This field is required'
-            elif item is not None and item_field.native_validate is not None:
-                for path, error in item_field.native_validate(item, context):
-                    yield (str(index),) + path, error
+            for path, error in item_validator(item, context):
+                yield (str(index),) + path, error
 
     def convert(self, value: Any) -> Any:
         if value is Missing:
@@ -173,21 +170,14 @@ class DictField(_CompoundField):
 
     def validate(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:
         yield from super().validate(value, context)
-        key_field, value_field = self.key_field, self.value_field
+        key_validator = self.key_field.validation_errors
+        value_validator = self.value_field.validation_errors
+
         for key, val in value.items():
-            reported_required = False
-            if key is Missing or (key is None and not key_field.allow_none):
-                reported_required = True
-                yield (str(key),), 'This field is required'
-            elif key is not None and key_field.native_validate is not None:
-                for path, error in key_field.native_validate(key, context):
-                    yield (str(key),) + path, error
-            if val is Missing or (val is None and not value_field.allow_none):
-                if not reported_required:
-                    yield (str(key),), 'This field is required'
-            elif val is not None and value_field.native_validate is not None:
-                for path, error in value_field.native_validate(val, context):
-                    yield (str(key),) + path, error
+            for path, error in key_validator(key, context):
+                yield (str(key),) + path, error
+            for path, error in value_validator(val, context):
+                yield (str(key),) + path, error
 
     def convert(self, value: Any) -> Any:
         if value is Missing:

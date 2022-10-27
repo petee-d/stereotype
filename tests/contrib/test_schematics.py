@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional, Iterable
-from unittest import TestCase
+from unittest import TestCase, mock
 
 from schematics.models import Model as SchematicsModel
 from schematics.transforms import blacklist, whitelist
@@ -25,6 +25,13 @@ class Inner(SchematicsModel):
         if context is not None and context.get('private', False):
             data['stuff'] = '<hidden>'
         return data
+
+    def __deepcopy__(self, memodict=None):
+        # Works around the fact that deep copy doesn't work in Schematics 2
+        return self.__class__(self.to_primitive())
+
+    def __repr__(self):
+        return '<Inner>'
 
     class Options:
         roles = {
@@ -54,6 +61,10 @@ class Outer(SchematicsModel):
         if value % 2:
             raise ValueError('Must be even')
 
+    def __deepcopy__(self, memodict=None):
+        # Works around the fact that deep copy doesn't work in Schematics 2
+        return self.__class__(self.to_primitive())
+
     class Options:
         roles = {
             ROLE_X.name: blacklist(),
@@ -68,7 +79,7 @@ class TestSchematicsModelField(TestCase):
         self.assertIs(Missing, root.outer)
         self.assertEqual({'inner': {'bool': None, 'stuff': []}, 'number': 42.0}, root.serialize())
         self.assertEqual(root.copy(deep=True), root)
-        self.assertEqual('<Root {number=42.0, string=Missing, inner=<Inner: Inner object>, outer=Missing}>', repr(root))
+        self.assertEqual('<Root {number=42.0, string=Missing, inner=<Inner>, outer=Missing}>', repr(root))
 
     def test_none_value(self):
         root = Root({'inner': None, 'otter': None})
@@ -121,16 +132,17 @@ class TestSchematicsModelField(TestCase):
             'inner': {'stuff': ['Please provide no more than 2 items.']},
             'otter': {
                 'recursive': {'bool': ['This field is required.'], 'stuff': ['Please provide no more than 2 items.']},
-                'string': ["Value must be one of ['str', 'ing']."],
+                'string': [mock.ANY],
             },
         }, e.exception.errors)
+        self.assertIn("must be one of", e.exception.errors["otter"]["string"][0])  # Exact message differs by version
 
     def test_configuration_error_no_explicit_field(self):
         class Bad(Model):
             worse: Outer = Outer
         with self.assertRaises(ConfigurationError) as e:
             Bad()
-        self.assertEqual("Field worse: Unrecognized field annotation Outer (may need an explicit Field)",
+        self.assertEqual("Field worse of Bad: Unrecognized field annotation Outer (may need an explicit Field)",
                          str(e.exception))
 
     def test_configuration_error_mismatch(self):
@@ -138,8 +150,8 @@ class TestSchematicsModelField(TestCase):
             worse: Root = SchematicsModelField()
         with self.assertRaises(ConfigurationError) as e:
             Bad()
-        self.assertEqual("Field worse: SchematicsModelField cannot be used for annotation Root, should use ModelField",
-                         str(e.exception))
+        self.assertEqual("Field worse of Bad: SchematicsModelField cannot be used for annotation Root, "
+                         "should use ModelField", str(e.exception))
 
     def test_to_primitive_context(self):
         root = Root({

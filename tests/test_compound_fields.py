@@ -10,6 +10,13 @@ from stereotype.roles import RequestedRoleFields, Role
 from tests.common import PrivateStrField
 
 
+def is_numeric(value: Optional[str], _):
+    if value is None:
+        raise ValueError('Not really optional')
+    if not value.isnumeric():
+        raise ValueError("Must be numeric")
+
+
 class MyBoolModel(Model):
     type = 'bool'
     field: bool
@@ -31,6 +38,7 @@ class SomeLists(Model):
     lists: List[List[float]] = list
     models: Optional[List[MyBoolModel]] = None
     dynamics: List[Union[MyBoolModel, MyStrModel]] = ListField(primitive_name='union')
+    validators: List[str] = ListField(StrField(max_length=3, validators=[is_numeric]), default=[], hide_empty=True)
 
 
 class SimpleInt(Model):
@@ -45,8 +53,11 @@ class TestListType(TestCase):
         self.assertEqual([], model.lists)
         self.assertIsNone(model.models)
         self.assertIs(Missing, model.dynamics)
-        self.assertEqual('<SomeLists {ints=Missing, optionals=Missing, lists=[], models=None, dynamics=Missing}>',
-                         repr(model))
+        self.assertEqual([], model.validators)
+        self.assertEqual(
+            '<SomeLists {ints=Missing, optionals=Missing, lists=[], models=None, dynamics=Missing, validators=[]}>',
+            repr(model),
+        )
         self.assertEqual({'lists': [], 'models': None}, model.serialize())
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
@@ -56,8 +67,10 @@ class TestListType(TestCase):
             'union': ['This field is required'],
         }, ctx.exception.errors)
 
-        self.assertEqual('<SomeLists {ints=Missing, optionals=Missing, lists=[], models=None, dynamics=Missing}>',
-                         repr(model))
+        self.assertEqual(
+            '<SomeLists {ints=Missing, optionals=Missing, lists=[], models=None, dynamics=Missing, validators=[]}>',
+            repr(model),
+        )
         self.assertEqual('<Field ints of type List[int], required>', repr(SomeLists.__fields__[0]))
         self.assertEqual('<Field optionals of type List[str], required>', repr(SomeLists.__fields__[1]))
 
@@ -68,6 +81,7 @@ class TestListType(TestCase):
             'lists': [[1], [2, 2.2]],
             'models': [{'field': True}],
             'union': [{'type': 'str'}, {'type': 'bool', 'field': False}],
+            'validators': ['123', 1],
         })
         self.assertEqual([4, 5, 6], model.ints)
         self.assertIsInstance(model.ints[0], int)
@@ -76,6 +90,7 @@ class TestListType(TestCase):
         self.assertIsInstance(model.lists[0][0], float)
         self.assertEqual([MyBoolModel({'field': True})], model.models)
         self.assertEqual([MyStrModel({'field': ''}), MyBoolModel({'field': False})], model.dynamics)
+        self.assertEqual(['123', '1'], model.validators)
         model.validate()
         self.assertEqual({
             'ints': [4, 5, 6],
@@ -83,9 +98,10 @@ class TestListType(TestCase):
             'lists': [[1.], [2., 2.2]],
             'models': [{'field': True}],
             'union': [{'type': 'str', 'field': ''}, {'type': 'bool', 'field': False}],
+            'validators': ['123', '1'],
         }, model.serialize())
         self.assertEqual('<SomeLists {ints=[(3 items)], optionals=[(2 items)], lists=[(2 items)], models=[(1 items)], '
-                         'dynamics=[(2 items)]}>', repr(model))
+                         'dynamics=[(2 items)], validators=[(2 items)]}>', repr(model))
 
     def test_inner_validation(self):
         data = {
@@ -94,6 +110,7 @@ class TestListType(TestCase):
             'lists': [[1], [None, 2.2]],
             'models': [None, {'bad_field': True}],
             'union': [{'type': 'bool', 'field': False}, {'type': 'str', 'field': '01234'}],
+            'validators': ['200', None, 'bad', 'worse'],
         }
         model = SomeLists(data)
         self.assertEqual([None, 5], model.ints)
@@ -101,6 +118,7 @@ class TestListType(TestCase):
         self.assertEqual([[1], [None, 2.2]], model.lists)
         self.assertEqual([None, MyBoolModel({'bad_field': True})], model.models)
         self.assertEqual([MyBoolModel({'field': False}), MyStrModel({'field': '01234'})], model.dynamics)
+        self.assertEqual(['200', None, 'bad', 'worse'], model.validators)
         self.assertEqual(data, model.serialize())
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
@@ -111,6 +129,11 @@ class TestListType(TestCase):
             'models': {'0': ['This field is required'],
                        '1': {'bad_field': ['Nope'], 'field': ['This field is required']}},
             'union': {'1': {'field': ['Must be at most 3 characters long']}},
+            'validators': {
+                '1': ['This field is required'],
+                '2': ['Must be numeric'],
+                '3': ['Must be at most 3 characters long', 'Must be numeric'],
+            },
         }, ctx.exception.errors)
 
     def test_size_validation(self):
@@ -173,8 +196,8 @@ class TestListType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field mismatch: ListField cannot be used for annotation typing.Dict[str, '
-                         'tests.test_compound_fields.MyStrModel], should use DictField', str(ctx.exception))
+        self.assertEqual("Field mismatch of Bad: ListField cannot be used for annotation typing.Dict[str, "
+                         "tests.test_compound_fields.MyStrModel], should use DictField", str(ctx.exception))
 
     def test_configuration_error_list_item_mismatch(self):
         class Bad(Model):
@@ -182,12 +205,13 @@ class TestListType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field worse: StrField cannot be used for annotation bool, should use BoolField',
+        self.assertEqual("Field worse of Bad: StrField cannot be used for annotation bool, should use BoolField",
                          str(ctx.exception))
 
     def test_to_primitive_context(self):
         class Stuff(Model):
             lst: List[str] = ListField(PrivateStrField())
+
         model = Stuff({'lst': ['one', 'two']})
         serialized = model.to_primitive(context={'private': True})
         self.assertEqual(serialized['lst'], ['<hidden>', '<hidden>'])
@@ -199,6 +223,8 @@ class MyDicts(Model):
     bool_to_model: Optional[Dict[bool, MyBoolModel]] = None
     str_to_opt_dict: Dict[str, Optional[Dict[int, int]]] = DictField(value_field=DictField(min_length=1),
                                                                      hide_empty=True)
+    validators: Dict[str, Optional[str]] = DictField(key_field=StrField(validators=[is_numeric]),
+                                                     value_field=StrField(validators=[is_numeric]), default={})
 
 
 class TestDictType(TestCase):
@@ -208,7 +234,8 @@ class TestDictType(TestCase):
         self.assertEqual({'xy': []}, model.str_to_floats)
         self.assertIsNone(model.bool_to_model)
         self.assertIs(Missing, model.str_to_opt_dict)
-        self.assertEqual({'str_to_floats': {'xy': []}, 'bool_to_model': None}, model.serialize())
+        self.assertEqual({}, model.validators)
+        self.assertEqual({'str_to_floats': {'xy': []}, 'bool_to_model': None, 'validators': {}}, model.serialize())
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
         self.assertEqual({
@@ -217,14 +244,19 @@ class TestDictType(TestCase):
         }, ctx.exception.errors)
 
         self.assertEqual('<MyDicts {int_to_int=Missing, str_to_floats={(1 items)}, bool_to_model=None, '
-                         'str_to_opt_dict=Missing}>', repr(model))
+                         'str_to_opt_dict=Missing, validators={}}>', repr(model))
         self.assertEqual('<Field int_to_int of type Dict[int, int], required>', repr(MyDicts.__fields__[0]))
 
+        model.int_to_int = {}
         model.str_to_floats = {}
         model.str_to_opt_dict = {}
-        self.assertEqual({'bool_to_model': None, 'str_to_floats': {}}, model.serialize())
-        self.assertEqual('<MyDicts {int_to_int=Missing, str_to_floats={}, bool_to_model=None, '
-                         'str_to_opt_dict={}}>', repr(model))
+        model.validate()
+        self.assertEqual({'int_to_int': {}, 'bool_to_model': None, 'str_to_floats': {}, 'validators': {}},
+                         model.serialize())
+        self.assertEqual(
+            '<MyDicts {int_to_int={}, str_to_floats={}, bool_to_model=None, str_to_opt_dict={}, validators={}}>',
+            repr(model),
+        )
 
     def test_empty_default(self):
         class EmptyDicts(Model):
@@ -267,20 +299,23 @@ class TestDictType(TestCase):
             'str_to_floats': {},
             'bool_to_model': {True: {'field': False}},
             'str_to_opt_dict': {'x': {'1': 2.0}, 'y': {3.0: '4'}},
+            'validators': {'1': '1', 2: 2}
         })
         self.assertEqual({1: 2, 3.0: 4.0}, model.int_to_int)
         self.assertEqual({}, model.str_to_floats)
         self.assertEqual({True: MyBoolModel({'field': False})}, model.bool_to_model)
         self.assertEqual({'x': {1: 2}, 'y': {3: 4}}, model.str_to_opt_dict)
+        self.assertEqual({'1': '1', '2': '2'}, model.validators)
         model.validate()
         self.assertEqual({
             'int_to_int': {1: 2, 3.0: 4.0},
             'str_to_floats': {},
             'bool_to_model': {True: {'field': False}},
             'str_to_opt_dict': {'x': {1: 2}, 'y': {3: 4}},
+            'validators': {'1': '1', '2': '2'},
         }, model.serialize())
         self.assertEqual('<MyDicts {int_to_int={(2 items)}, str_to_floats={}, bool_to_model={(1 items)}, '
-                         'str_to_opt_dict={(2 items)}}>', repr(model))
+                         'str_to_opt_dict={(2 items)}, validators={(2 items)}}>', repr(model))
 
     def test_conversion_errors(self):
         data = cast(dict, {
@@ -345,6 +380,7 @@ class TestDictType(TestCase):
             'str_to_floats': {'a': [4.7, None, 42]},
             'bool_to_model': {None: {'field': False}, True: {'field': True, 'bad_field': True}, False: None},
             'str_to_opt_dict': {'x': {1: 2}, 'y': {}},
+            'validators': {None: None, 200: 200, 'key': '400', '400': 'val'},
         }
         model = MyDicts(data)
         self.assertIs(None, model.int_to_int)
@@ -355,7 +391,8 @@ class TestDictType(TestCase):
             False: None,
         }, model.bool_to_model)
         self.assertEqual({'x': {1: 2}, 'y': {}}, model.str_to_opt_dict)
-        self.assertEqual(data, model.serialize())
+        self.assertEqual({None: None, '200': '200', 'key': '400', '400': 'val'}, model.validators)
+        self.assertEqual(dict(data, validators=model.validators), model.serialize())
         self.assertIsInstance(model.serialize()['str_to_floats']['a'][2], float)
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
@@ -367,6 +404,9 @@ class TestDictType(TestCase):
                               'True': {'bad_field': ['Nope']},
                               'False': ['This field is required']},
             'str_to_opt_dict': {'y': ['Provide at least 1 item']},
+            'validators': {'None': ['This field is required', 'Not really optional'],
+                           'key': ['Must be numeric'],
+                           '400': ['Must be numeric']}
         }, ctx.exception.errors)
 
     def test_double_required_error(self):
@@ -386,8 +426,8 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field mismatch: DictField cannot be used for annotation '
-                         'typing.List[tests.test_compound_fields.MyStrModel], should use ListField', str(ctx.exception))
+        self.assertEqual("Field mismatch of Bad: DictField cannot be used for annotation "
+                         "typing.List[tests.test_compound_fields.MyStrModel], should use ListField", str(ctx.exception))
 
     def test_configuration_error_invalid_key(self):
         class InvalidKey(Model):
@@ -395,8 +435,8 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             InvalidKey()
-        self.assertEqual('Field bad: DictField keys may only be booleans, numbers or strings: '
-                         'typing.Dict[tests.test_compound_fields.MyStrModel, bool]', str(ctx.exception))
+        self.assertEqual("Field bad of InvalidKey: DictField keys may only be booleans, numbers or strings: "
+                         "typing.Dict[tests.test_compound_fields.MyStrModel, bool]", str(ctx.exception))
 
     def test_configuration_error_dict_key_mismatch(self):
         class Bad(Model):
@@ -404,7 +444,7 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field bad: FloatField cannot be used for annotation int, should use IntField',
+        self.assertEqual("Field bad of Bad: FloatField cannot be used for annotation int, should use IntField",
                          str(ctx.exception))
 
     def test_configuration_error_dict_value_mismatch(self):
@@ -413,7 +453,7 @@ class TestDictType(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             Bad()
-        self.assertEqual('Field worse: ModelField cannot be used for annotation bool, should use BoolField',
+        self.assertEqual("Field worse of Bad: ModelField cannot be used for annotation bool, should use BoolField",
                          str(ctx.exception))
 
     def test_to_primitive_context(self):

@@ -91,8 +91,8 @@ class TestModels(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             BadType()
-        self.assertEqual('Field set: Unrecognized field annotation typing.Set[int] (may need an explicit Field)',
-                         str(ctx.exception))
+        self.assertEqual("Field set of BadType: Unrecognized field annotation typing.Set[int] "
+                         "(may need an explicit Field)", str(ctx.exception))
 
     def test_bad_field_type_native(self):
         class BadType(Model):
@@ -100,7 +100,7 @@ class TestModels(TestCase):
 
         with self.assertRaises(ConfigurationError) as ctx:
             BadType()
-        self.assertEqual("Field bad: Unrecognized field annotation complex (may need an explicit Field)",
+        self.assertEqual("Field bad of BadType: Unrecognized field annotation complex (may need an explicit Field)",
                          str(ctx.exception))
 
     def test_multiple_non_abstract_bases(self):
@@ -290,7 +290,7 @@ class TestModels(TestCase):
 
         with self.assertRaises(ConfigurationError) as e:
             Bad()
-        self.assertEqual('Field bad: AnyField cannot be used for annotation typing.Set[int]', str(e.exception))
+        self.assertEqual("Field bad of Bad: AnyField cannot be used for annotation typing.Set[int]", str(e.exception))
 
     def test_any_field_configuration_error_none_default(self):
         class Bad(Model):
@@ -298,7 +298,7 @@ class TestModels(TestCase):
 
         with self.assertRaises(ConfigurationError) as e:
             Bad()
-        self.assertEqual('Field `bad` is not Optional and cannot use None as default', str(e.exception))
+        self.assertEqual("Field bad of Bad: Cannot use None as default on a non-Optional Field", str(e.exception))
 
     def test_inheritance_from_non_model(self):
         class NonModel:

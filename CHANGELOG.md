@@ -1,10 +1,16 @@
 # Changelog
 
 ## v1.4.2
+Changes:
+* Improved Python 3.10 support 
+  * New Union (`|`) and `list` & `dict` annotations now work in Python 3.10+ with `from __future__ import annotations`
+* Support of Schematics 2 for `SchematicsModelField` (Schematics 1 doesn't work in Python 3.10+)
+  * Note Schematics 2 doesn't seem to support deep copy by default
+
 Fixes:
 * Fixed being unable to inherit from non-Model classes
 * Fixed inheritance of abstract Models from non-abstract Models
-* Fixed support of new Union (`|`) and `list` & `dict` annotations in Python 3.10 and above
+* Fixed field validator callbacks not executing within compound field items
 
 ## v1.4.1
 Features:

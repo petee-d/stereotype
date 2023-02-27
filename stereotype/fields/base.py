@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from copy import deepcopy
+from copy import deepcopy, copy
 from typing import Any, Optional, Callable, Iterable, TYPE_CHECKING, List, Tuple
 
 from stereotype.fields.annotations import AnnotationResolver
@@ -94,13 +94,15 @@ class Field:
             raise ConfigurationError(f'Value `{self.default}` used as field default must be of type {self.type_repr}')
 
     def copy_field(self):
-        """Copies the field definition - explicit Fields must be copied, otherwise subclasses would share them."""
-        copied = type(self)()
-        for slot in type(self).__slots__:
-            value = getattr(self, slot)
-            if slot == 'native_validate' and value is not None:
-                value = getattr(copied, value.__func__.__name__)
-            setattr(copied, slot, value)
+        """
+        Copies the field definition - explicit Fields must be copied, otherwise subclasses would share them.
+        Any fields where plain `copy.copy` won't be enough should be manually adjusted afterwards.
+        """
+        copied = copy(self)
+        # The native_validate slot contains a method, which would normally remain bound to the old instance
+        native_validate = getattr(self, 'native_validate', None)
+        if native_validate is not None:
+            copied.native_validate = getattr(copied, native_validate.__func__.__name__)
         return copied
 
     def validation_errors(self, value: Any, context: ValidationContextType) -> Iterable[PathErrorType]:

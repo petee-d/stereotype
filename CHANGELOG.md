@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.3
+Changes:
+* Made it much easier to declare custom fields with required parameters
+
 ## v1.4.2
 Changes:
 * Improved Python 3.10 support 

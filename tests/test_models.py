@@ -392,6 +392,21 @@ class TestModels(TestCase):
         self.assertEqual("Field _private of Model class Private defines an explicit Field "
                          "but lacks a type annotation or isn't public", str(ctx.exception))
 
+    def test_mapping_access(self):
+        model = DriedLeaf({'age': 5})
+        self.assertEqual(model.age, model['age'])
+        self.assertEqual(model.get('age'), model.age)
+        self.assertEqual(model.get('species', 'Unknown'), 'Unknown')
+
+    def test_get_field_default_when_missing(self):
+        class Foo(Model):
+            bar: str
+            baz: str
+
+        model = Foo({'bar': 'help'})
+        self.assertEqual(model.get('baz', 'missing_value'), 'missing_value')
+        self.assertEqual(model.get('lorem', 'unknown'), 'unknown')
+
     def test_ensure_missing_coverage(self):
         # The only purpose of this test is to ensure 100% coverage for *dead* code, where possible
         self.assertEqual(1, IntField().to_primitive(1))

@@ -144,19 +144,21 @@ class Model(metaclass=ModelMeta):
         return set()
 
     def __getitem__(self, key):
-        if key not in self.__slots__:
-            raise KeyError(key)  # Avoids getting methods via getitem
-        return getattr(self, key)
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(key)
 
     def get(self, key, default=None):
         """
         Returns a value of a field with the given key, or the provided default if no such field exists
         or a required field is missing value.
         """
-        if key not in self.__slots__:
+        try:
+            value = getattr(self, key)
+            return value if value is not Missing else default
+        except AttributeError:
             return default
-        value = getattr(self, key)
-        return value if value is not Missing else default
 
     def __eq__(self, other: Model):
         if type(self) != type(other):

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.5.0
+Small features:
+* Added `get` and `__getitem__` (`model["field"]`) to `Model`
+  * Can be used to retrieve fields (incl. serializable), properties and explicit slots
+* Explicit `AnyField` allows using any type annotation, not just `typing.Any`
+
+Fixes:
+* Fixed `repr` for models with `AnyField`
+
 ## v1.4.3
 Changes:
 * Made it much easier to declare custom fields with required parameters

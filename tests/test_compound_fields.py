@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional, Union, List, Dict, cast, Iterable
+from typing import Optional, Union, List, Dict, cast, Iterable, Set
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, ModelField, ConfigurationError, ListField, \
-    StrField, BoolField, FloatField
+    StrField, BoolField, FloatField, IntField
 from stereotype.fields.compound import DictField
 from stereotype.roles import RequestedRoleFields, Role
 from tests.common import PrivateStrField
@@ -198,6 +198,14 @@ class TestListType(TestCase):
             Bad()
         self.assertEqual("Field mismatch of Bad: ListField cannot be used for annotation typing.Dict[str, "
                          "tests.test_compound_fields.MyStrModel], should use DictField", str(ctx.exception))
+
+    def test_configuration_error_resolvable(self):
+        class Bad(Model):
+            bad: Set[int] = ListField(item_field=IntField())
+
+        with self.assertRaises(ConfigurationError) as e:
+            Bad()
+        self.assertEqual("Field bad of Bad: ListField cannot be used for annotation typing.Set[int]", str(e.exception))
 
     def test_configuration_error_list_item_mismatch(self):
         class Bad(Model):

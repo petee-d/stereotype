@@ -185,7 +185,7 @@ class Model(metaclass=ModelMeta):
                         parts.append(f'{base}{{({len(value)} items)}}')
                 else:
                     parts.append(f'{base}{value!r}')
-            elif issubclass(field.type, Model):
+            elif field.type is not NotImplemented and issubclass(field.type, Model):
                 parts.append(f'{base}{type(value).__name__ if isinstance(value, Model) else value}')
             else:
                 parts.append(f'{base}{repr(value)}')

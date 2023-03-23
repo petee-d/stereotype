@@ -43,6 +43,17 @@ class PropertyAccess(PropertyAccessBase):
         return self.default_field
 
 
+class NonModel:
+    def __init__(self, x=1):
+        self.x = x
+
+    def __eq__(self, other):
+        return self.x == other.x
+
+    def __repr__(self):
+        return f'<{self.x}>'
+
+
 class TestModels(TestCase):
     def test_bad_init(self):
         with self.assertRaises(ConversionError) as ctx:
@@ -281,42 +292,48 @@ class TestModels(TestCase):
             normal: Any
             optional: Optional[Any] = None
             custom: Optional[Any] = AnyField(deep_copy=True, default='x', hide_none=True, primitive_name='customized')
+            non_model: Optional[NonModel] = AnyField(default=NonModel, hide_none=True)
 
             def validate_optional(self, value, _):
                 if value:
                     raise ValueError('Must be falsy')
 
-        initial = {'normal': {'x': 1}, 'customized': [1, [], {}]}
+        initial = {'normal': {'x': 1}, 'customized': [1, [], {}], 'non_model': NonModel(x=42)}
         model = WithAny(initial)
         self.assertEqual({'x': 1}, model.normal)
         self.assertIsNone(model.optional)
         self.assertEqual([1, [], {}], model.custom)
+        self.assertEqual(42, model.non_model.x)
         initial['customized'][1].append(2)
         initial['customized'].pop(-1)
         model.validate()
-        self.assertEqual({'normal': {'x': 1}, 'optional': None, 'customized': [1, [], {}]}, model.serialize())
+        self.assertEqual({
+            'normal': {'x': 1},
+            'optional': None,
+            'customized': [1, [], {}],
+            'non_model': NonModel(x=42),
+        }, model.serialize())
+        self.assertEqual("<WithAny {normal={'x': 1}, optional=None, custom=[1, [], {}], non_model=<42>}>", repr(model))
 
         model.normal['x'] = 'no copy'
+        model.non_model = None
         self.assertEqual({'normal': {'x': 'no copy'}, 'optional': None, 'customized': [1, [], {}]}, model.serialize())
         model.serialize()['customized'][1].append(3)
         self.assertEqual([1, [], {}], model.custom)
+        self.assertEqual(
+            "<WithAny {normal={'x': 'no copy'}, optional=None, custom=[1, [], {}], non_model=None}>",
+            repr(model),
+        )
 
         model = WithAny({'optional': 123})
-        self.assertEqual({'optional': 123, 'customized': 'x'}, model.serialize())
+        self.assertEqual({'optional': 123, 'customized': 'x', 'non_model': NonModel(x=1)}, model.serialize())
+        self.assertEqual("<WithAny {normal=Missing, optional=123, custom='x', non_model=<1>}>", repr(model))
         with self.assertRaises(ValidationError) as e:
             model.validate()
         self.assertEqual({
             'normal': ['This field is required'],
             'optional': ['Must be falsy'],
         }, e.exception.errors)
-
-    def test_any_field_configuration_error_mismatch(self):
-        class Bad(Model):
-            bad: Set[int] = AnyField(hide_none=True)
-
-        with self.assertRaises(ConfigurationError) as e:
-            Bad()
-        self.assertEqual("Field bad of Bad: AnyField cannot be used for annotation typing.Set[int]", str(e.exception))
 
     def test_any_field_configuration_error_none_default(self):
         class Bad(Model):

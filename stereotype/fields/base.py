@@ -170,7 +170,7 @@ class Field:
 
 class AnyField(Field):
     """
-    Value of any type (annotation ``typing.Any``).
+    Value of any type (usually annotation ``typing.Any``, but can be anything).
 
     :param deep_copy: If true, conversion, serialization and copying will use copy.deepcopy for this value
     :param default: Means the field isn't required, used as default directly or called if callable
@@ -181,6 +181,7 @@ class AnyField(Field):
     """
 
     __slots__ = Field.__slots__ + ('deep_copy',)
+    type = NotImplemented  # There is no appropriate type, NotImplemented is handled specifically
     type_repr: str = 'Any'
     atomic = False
 
@@ -192,8 +193,7 @@ class AnyField(Field):
         self.deep_copy = deep_copy
 
     def init_from_annotation(self, parser: AnnotationResolver):
-        if parser.annotation is not Any:
-            raise parser.incorrect_type(self)
+        pass  # Don't require typing.Any, explicit AnyField should allow any typing
 
     def convert(self, value: Any) -> Any:
         if value is Missing:

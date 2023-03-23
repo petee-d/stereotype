@@ -5,7 +5,7 @@ from typing import Set, cast, Any, Optional, List, Dict, Union, Type, ClassVar
 from unittest import TestCase
 
 from stereotype import Model, Missing, ValidationError, ConversionError, BoolField, IntField, ConfigurationError, \
-    FloatField, StrField, DataError
+    FloatField, StrField, DataError, serializable
 from stereotype.fields.base import Field, AnyField
 from stereotype.fields.compound import DictField
 from tests.common import Leaf
@@ -15,6 +15,32 @@ class DriedLeaf(Leaf):
     healthy = False
     crunchy: ClassVar[bool] = True
     age: float = FloatField(max_value=5, default=0.)
+
+
+class PropertyAccessBase(Model):
+    __slots__ = ['extra_slot']
+
+    basic_field: str
+
+    @serializable
+    def basic_serializable(self):
+        return self.basic_field
+
+    @property
+    def basic_property(self):
+        return self.basic_field
+
+
+class PropertyAccess(PropertyAccessBase):
+    default_field: str = 'hello'
+
+    @serializable
+    def default_serializable(self):
+        return self.default_field
+
+    @property
+    def default_property(self):
+        return self.default_field
 
 
 class TestModels(TestCase):
@@ -382,30 +408,79 @@ class TestModels(TestCase):
         with self.assertRaises(ConfigurationError) as ctx:
             class NoAnnotation(Model):
                 some_field = StrField(max_length=5)
+
             _ = NoAnnotation
         self.assertEqual("Field some_field of Model class NoAnnotation defines an explicit Field "
                          "but lacks a type annotation or isn't public", str(ctx.exception))
         with self.assertRaises(ConfigurationError) as ctx:
             class Private(Model):
                 _private: str = StrField(max_length=5)
+
             _ = Private
         self.assertEqual("Field _private of Model class Private defines an explicit Field "
                          "but lacks a type annotation or isn't public", str(ctx.exception))
 
-    def test_mapping_access(self):
-        model = DriedLeaf({'age': 5})
-        self.assertEqual(model.age, model['age'])
-        self.assertEqual(model.get('age'), model.age)
-        self.assertEqual(model.get('species', 'Unknown'), 'Unknown')
+    def test_get_field(self):
+        model = PropertyAccess({'basic_field': 'help'})
+        model.extra_slot = 'slot'
 
-    def test_get_field_default_when_missing(self):
-        class Foo(Model):
-            bar: str
-            baz: str
+        # With value
+        self.assertEqual('help', model.get('basic_field'))
+        self.assertEqual('help', model.get('basic_serializable'))
+        self.assertEqual('help', model.get('basic_property'))
+        self.assertEqual('slot', model.get('extra_slot'))
 
-        model = Foo({'bar': 'help'})
-        self.assertEqual(model.get('baz', 'missing_value'), 'missing_value')
-        self.assertEqual(model.get('lorem', 'unknown'), 'unknown')
+        # With default value
+        self.assertEqual('hello', model.get('default_field'))
+        self.assertEqual('hello', model.get('default_serializable'))
+        self.assertEqual('hello', model.get('default_property'))
+
+        # Missing value
+        incomplete_model = PropertyAccess()
+        self.assertIsNone(incomplete_model.get('basic_field'))
+        self.assertEqual('unknown', incomplete_model.get('basic_field', 'unknown'))
+        self.assertIsNone(incomplete_model.get('basic_serializable'))
+        self.assertEqual('unknown', incomplete_model.get('basic_serializable', 'unknown'))
+        self.assertIsNone(incomplete_model.get('basic_property'))
+        self.assertEqual('unknown', incomplete_model.get('basic_property', 'unknown'))
+
+        # Non-existent field, method or unused slot
+        incomplete_model = PropertyAccess()
+        self.assertIsNone(incomplete_model.get('doesnt_exist'))
+        self.assertEqual('unknown', model.get('doesnt_exist', 'unknown'))
+        self.assertIsNone(incomplete_model.get('get'))
+        self.assertEqual('unknown', model.get('get', 'unknown'))
+        self.assertIsNone(incomplete_model.get('extra_slot'))
+        self.assertEqual('unknown', incomplete_model.get('extra_slot', 'unknown'))
+
+    def test_getitem(self):
+        model = PropertyAccess({'basic_field': 'help'})
+        model.extra_slot = 'slot'
+
+        # With value
+        self.assertEqual('help', model['basic_field'])
+        self.assertEqual('help', model['basic_serializable'])
+        self.assertEqual('help', model['basic_property'])
+        self.assertEqual('slot', model['extra_slot'])
+
+        # With default value
+        self.assertEqual('hello', model['default_field'])
+        self.assertEqual('hello', model['default_serializable'])
+        self.assertEqual('hello', model['default_property'])
+
+        # Missing value
+        incomplete_model = PropertyAccess()
+        self.assertIs(Missing, incomplete_model['basic_field'])
+        self.assertIs(Missing, incomplete_model['basic_serializable'])
+        self.assertIs(Missing, incomplete_model['basic_property'])
+
+        # Non-existent field, method or unused slot
+        with self.assertRaisesRegex(KeyError, "'doesnt_exist'"):
+            self.fail(f'should raise: {model["doesnt_exist"]}')
+        with self.assertRaisesRegex(KeyError, "'get'"):
+            self.fail(f'should raise: {model["get"]}')
+        with self.assertRaisesRegex(KeyError, "'extra_slot'"):
+            self.fail(f'should raise: {incomplete_model["extra_slot"]}')
 
     def test_ensure_missing_coverage(self):
         # The only purpose of this test is to ensure 100% coverage for *dead* code, where possible

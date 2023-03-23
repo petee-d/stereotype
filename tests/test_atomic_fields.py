@@ -119,9 +119,6 @@ class TestIntField(TestCase):
         self.assertEqual(17, model.min_max)
         self.assertEqual(17, model['min_max'])
         self.assertEqual(0, model['even'])
-        with self.assertRaises(KeyError) as ctx:
-            self.failIf(model['serialize'])
-        self.assertEqual("'serialize'", str(ctx.exception))
         with self.assertRaises(ValidationError) as ctx:
             model.validate()
         self.assertEqual({

@@ -50,6 +50,7 @@ class ModelMeta(type):
         attrs['__validated_fields__'] = NotImplemented
         attrs['__role_fields__'] = NotImplemented
         attrs['__roles__'] = NotImplemented
+        attrs['__gettable__'] = set(all_slots) | set(mcs._iterate_base_gettable(bases)) | mcs._find_properties(attrs)
 
         try:
             cls = cast(Type['Model'], type.__new__(mcs, name, bases, attrs))
@@ -162,6 +163,19 @@ class ModelMeta(type):
         for name, field in mcs._iterate_serializable(attrs):
             field.init_name(name)
             yield field
+
+    @classmethod
+    def _find_properties(mcs, attrs: Dict[str, Any]) -> Set[str]:
+        """Enumerates properties and serializable fields (as they are also properties) of the model class."""
+        return {name for name, attr in attrs.items() if isinstance(attr, property)}
+
+    @classmethod
+    def _iterate_base_gettable(mcs, bases: Tuple[type, ...]) -> Iterable[str]:
+        from stereotype.model import Model
+        for base in bases:
+            if not issubclass(base, Model):
+                continue
+            yield from getattr(base, '__gettable__', ())
 
     @staticmethod
     def _resolve_annotations(cls: Type[Model]) -> Dict[str, Any]:

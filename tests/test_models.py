@@ -295,14 +295,17 @@ class TestModels(TestCase):
         initial['customized'].pop(-1)
         model.validate()
         self.assertEqual({'normal': {'x': 1}, 'optional': None, 'customized': [1, [], {}]}, model.serialize())
+        self.assertEqual("<WithAny {normal={'x': 1}, optional=None, custom=[1, [], {}]}>", repr(model))
 
         model.normal['x'] = 'no copy'
         self.assertEqual({'normal': {'x': 'no copy'}, 'optional': None, 'customized': [1, [], {}]}, model.serialize())
         model.serialize()['customized'][1].append(3)
         self.assertEqual([1, [], {}], model.custom)
+        self.assertEqual("<WithAny {normal={'x': 'no copy'}, optional=None, custom=[1, [], {}]}>", repr(model))
 
         model = WithAny({'optional': 123})
         self.assertEqual({'optional': 123, 'customized': 'x'}, model.serialize())
+        self.assertEqual("<WithAny {normal=Missing, optional=123, custom='x'}>", repr(model))
         with self.assertRaises(ValidationError) as e:
             model.validate()
         self.assertEqual({

@@ -181,6 +181,7 @@ class AnyField(Field):
     """
 
     __slots__ = Field.__slots__ + ('deep_copy',)
+    type = NotImplemented  # There is no appropriate type, NotImplemented is handled specifically
     type_repr: str = 'Any'
     atomic = False
 

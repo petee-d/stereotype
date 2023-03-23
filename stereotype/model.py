@@ -28,6 +28,7 @@ class Model(metaclass=ModelMeta):
     __validated_fields__: List[_ValidatedFieldConfig]
     __role_fields__: List[List[_OutputFieldConfig]]
     __roles__: List[FinalizedRoleFields]
+    __gettable__: Set[str]
 
     def __init__(self, raw_data: Optional[dict] = None):
         """
@@ -144,21 +145,22 @@ class Model(metaclass=ModelMeta):
         return set()
 
     def __getitem__(self, key):
+        if key not in self.__gettable__:
+            raise KeyError(key)  # Avoids getting methods via getitem
         try:
             return getattr(self, key)
         except AttributeError:
-            raise KeyError(key)
+            raise KeyError(key)  # Could happen for user-defined slot attributes that were never initialized
 
     def get(self, key, default=None):
         """
         Returns a value of a field with the given key, or the provided default if no such field exists
         or a required field is missing value.
         """
-        try:
-            value = getattr(self, key)
-            return value if value is not Missing else default
-        except AttributeError:
+        if key not in self.__gettable__:
             return default
+        value = getattr(self, key, Missing)
+        return value if value is not Missing else default
 
     def __eq__(self, other: Model):
         if type(self) != type(other):

@@ -417,6 +417,24 @@ class TestDictType(TestCase):
                            '400': ['Must be numeric']}
         }, ctx.exception.errors)
 
+    def test_conflicting_field_and_item_errors(self):
+        def is_valid_dict(value, context=None):
+            if "err" in value:
+                raise ValueError("Dict contains an error key")
+
+        class HasDict(Model):
+            field: Dict[str, str] = DictField(key_field=StrField(max_length=4), value_field=StrField(max_length=3),
+                                              validators=[is_valid_dict], max_length=2)
+
+        model = HasDict({"field": {"bad": "too long", "ok": "ok", "err": "ok", "worse": "key"}})
+        with self.assertRaises(ValidationError) as ctx:
+            model.validate()
+        self.assertEqual({'field': {
+            '_global': ['Provide at most 2 items', 'Dict contains an error key'],
+            'bad': ['Must be at most 3 characters long'],
+            'worse': ['Must be at most 4 characters long']
+        }}, ctx.exception.errors)
+
     def test_double_required_error(self):
         class RequiredDict(Model):
             dict: Dict[int, int]

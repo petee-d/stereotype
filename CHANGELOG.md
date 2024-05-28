@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.1
+Small fixes:
+* Fixed bug in `DataError.errors` when errors were reported both by the dict and of some of its items
+
 ## v1.5.0
 Small features:
 * Added `get` and `__getitem__` (`model["field"]`) to `Model`

@@ -54,6 +54,8 @@ class DataError(StereotypeError):
 
     error_list: List[PathErrorType]
 
+    ERRORS_DICT_SELF_KEY = '_global'
+
     def __init__(self, errors: List[PathErrorType]):
         self.error_list = errors
         super().__init__(self._error_string())
@@ -77,13 +79,16 @@ class DataError(StereotypeError):
         for path, error in self.error_list:
             container = errors
             if not path:
-                path = ('_global',)
+                path = (self.ERRORS_DICT_SELF_KEY,)
             for item in path[:-1]:
                 value = container.setdefault(item, {})
                 if isinstance(value, list):
-                    value = container[item] = cast(dict, {'_global': value})
+                    value = container[item] = cast(dict, {self.ERRORS_DICT_SELF_KEY: value})
                 container = value
             array = container.setdefault(path[-1], [])
+            if isinstance(array, dict):
+                # The target container is not an array as it has some deeper error
+                array = array.setdefault(self.ERRORS_DICT_SELF_KEY, [])
             array.append(error)
         return errors
 

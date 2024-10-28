@@ -8,6 +8,7 @@ from stereotype import Model, Missing, ValidationError, ConversionError, BoolFie
     FloatField, StrField, DataError, serializable
 from stereotype.fields.base import Field, AnyField
 from stereotype.fields.compound import DictField
+from stereotype.utils import PathValueError
 from tests.common import Leaf
 
 
@@ -498,6 +499,20 @@ class TestModels(TestCase):
             self.fail(f'should raise: {model["get"]}')
         with self.assertRaisesRegex(KeyError, "'extra_slot'"):
             self.fail(f'should raise: {incomplete_model["extra_slot"]}')
+
+    def test_validator_method_with_path_error(self):
+        class OddModel(Model):
+            even_list: List[int]
+
+            def validate_even_list(self, value: List[int], context=None):
+                for i, item in enumerate(value):
+                    if item % 2 != 0:
+                        raise PathValueError((str(i), ), f"{item} is not even")
+
+        model = OddModel({"even_list": [0, 2, 4, 6, 7, 8]})
+        with self.assertRaises(ValidationError) as ctx:
+            model.validate()
+        self.assertEqual(ctx.exception.errors, {"even_list": {"4": ["7 is not even"]}})
 
     def test_ensure_missing_coverage(self):
         # The only purpose of this test is to ensure 100% coverage for *dead* code, where possible

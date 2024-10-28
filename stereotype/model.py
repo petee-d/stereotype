@@ -5,7 +5,8 @@ from typing import Optional, Tuple, List, Iterable, Type, Set, Any, Callable
 from stereotype.fields.base import Field
 from stereotype.meta import ModelMeta
 from stereotype.roles import Role, RequestedRoleFields, FinalizedRoleFields, DEFAULT_ROLE
-from stereotype.utils import Missing, ValidationError, ConversionError, PathErrorType, ValidationContextType
+from stereotype.utils import Missing, ValidationError, ConversionError, PathErrorType, ValidationContextType, \
+    PathValueError
 
 
 class Model(metaclass=ModelMeta):
@@ -119,6 +120,8 @@ class Model(metaclass=ModelMeta):
             if validator_method is not None and value is not Missing and (value is not None or allow_none):
                 try:
                     validator_method(self, value, context)
+                except PathValueError as e:
+                    yield (input_name, ) + e.path, str(e)
                 except ValueError as e:
                     yield (input_name,), str(e)
 

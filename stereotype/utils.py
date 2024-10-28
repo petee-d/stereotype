@@ -106,3 +106,9 @@ class ConversionError(DataError, TypeError):
 
 class ValidationError(DataError, ValueError):
     """Potentially multiple errors created when validating already converted models."""
+
+
+class PathValueError(ValueError):
+    def __init__(self, path: Tuple[str], message: str):
+        self.path = path
+        super().__init__(message)

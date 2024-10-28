@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.2
+Small fixes:
+* Fixed `SchematicsModelField` mapping of list item errors (index wasn't forced to string)
+
 ## v1.5.1
 Small fixes:
 * Fixed bug in `DataError.errors` when errors were reported both by the dict and of some of its items

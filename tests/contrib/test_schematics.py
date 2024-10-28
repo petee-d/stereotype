@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from typing import Optional, Iterable
-from unittest import TestCase, mock
+from unittest import TestCase, mock, skipIf
 
+import schematics
 from schematics.models import Model as SchematicsModel
 from schematics.transforms import blacklist, whitelist
 from schematics.types import IntType, StringType, FloatType, BooleanType
@@ -17,7 +18,7 @@ ROLE_Y = Role('y')
 
 
 class Inner(SchematicsModel):
-    stuff = ListType(FloatType(required=True), required=True, default=list, max_size=2)
+    stuff = ListType(FloatType(required=True, max_value=7.), required=True, default=list, max_size=2)
     bool = BooleanType(required=True)
 
     def to_primitive(self, role=None, context=None):
@@ -136,6 +137,20 @@ class TestSchematicsModelField(TestCase):
             },
         }, e.exception.errors)
         self.assertIn("must be one of", e.exception.errors["otter"]["string"][0])  # Exact message differs by version
+
+    @skipIf(schematics.__version__ < '2', "Schematics 1 reporting of list item errors is broken")
+    def test_list_index_error_key(self):
+        root = Root({
+            'string': 'abc',
+            'inner': {'stuff': [1, 9], 'bool': True},
+            'otter': None,
+        })
+        with self.assertRaises(ValidationError) as e:
+            root.validate()
+        self.assertEqual('inner: stuff: 1: Float value should be less than or equal to 7.0.', str(e.exception))
+        self.assertEqual({
+            'inner': {'stuff': {'1': ['Float value should be less than or equal to 7.0.']}}
+        }, e.exception.errors)
 
     def test_configuration_error_no_explicit_field(self):
         class Bad(Model):

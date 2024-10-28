@@ -64,7 +64,7 @@ def _iterate_validation_errors(messages: dict) -> Iterable[PathErrorType]:
     for key, container in messages.items():
         if isinstance(container, list):
             for error in container:
-                yield (key,), error
+                yield (str(key),), error
         else:
             for path, error in _iterate_validation_errors(container):
-                yield (key,) + path, error
+                yield (str(key),) + path, error

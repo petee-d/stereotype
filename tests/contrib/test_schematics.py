@@ -280,25 +280,3 @@ class TestSchematicsModelField(TestCase):
             {"otter": {"recursive": {"bool": ["Must be either true or false."]}}},
             ctx.exception.errors,
         )
-
-    def test_test(self):
-        from stereotype import (
-            Model,
-            ConversionError,
-            ModelField,
-            IntField,
-        )
-
-        class A(Model):
-            x: int = IntField()
-
-        class B(Model):
-            a: A = ModelField()
-
-        class C(Model):
-            b: B = ModelField
-
-        with self.assertRaises(ConversionError) as ctx:
-            C({"b": B({"a": A({"x": ""})})})
-
-        print()

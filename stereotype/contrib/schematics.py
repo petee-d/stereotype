@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from copy import deepcopy
-from typing import Any, Optional, Type, cast, Iterable
+from typing import Any, Optional, Type, cast, Iterable, Sequence, Union
 
 try:
     # Schematics 2
@@ -93,7 +93,7 @@ class SchematicsModelField(ModelField):
         try:
             return super().convert(value)
         except SchematicsConversionError as e:
-            raise_conversion_error(e)
+            _raise_conversion_error(e)
 
 
 def _iterate_validation_errors(messages: dict) -> Iterable[PathErrorType]:
@@ -106,31 +106,15 @@ def _iterate_validation_errors(messages: dict) -> Iterable[PathErrorType]:
                 yield (str(key),) + path, error
 
 
-def raise_conversion_error(error):
-    items = list(error.messages.items())
+def _raise_conversion_error(error: SchematicsConversionError) -> None:
+    # Get the first error (for conversion, Schematics reports multiple, stereotype just one) and gather its path
     path = []
-    try_raise_conversion_error = (
-        _try_raise_conversion_error_stereotype_1
-        if isinstance(error, TypeError)
-        else _try_raise_conversion_error_stereotype_2
-    )
+    first_error_field: Mapping[str, Union[Sequence[str], Mapping]] = error.args[0]
+    while isinstance(first_error_field, Mapping):
+        path_key, first_error_field = next(iter(first_error_field.items()))
+        path.append(path_key)
+    first_error_field: Sequence[str]
 
-    while len(items) > 0:
-        items_tuple = items[0]
-        primitive_name = items_tuple[0]
-        path.append(primitive_name)
-        values = items_tuple[1]
-        try_raise_conversion_error(values, path)
-        items = list(values.items())
-
-
-def _try_raise_conversion_error_stereotype_1(values, path):
-    if not isinstance(values, dict):
-        message = values[0]
-        raise ConversionError.new(message, *path)
-
-
-def _try_raise_conversion_error_stereotype_2(values, path):
-    if not isinstance(values, Mapping):
-        message = str(values.messages[0])
-        raise ConversionError.new(message, *path)
+    # Schematics 1 -> list[str], Schematics 2 -> ConversionError, in both cases a sequence of string-like messages
+    first_message = str(first_error_field[0])
+    raise ConversionError.new(first_message, *path)

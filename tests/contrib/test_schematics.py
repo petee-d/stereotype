@@ -253,7 +253,6 @@ class TestSchematicsModelField(TestCase):
         self.assertEqual(primitive_value["inner"]["stuff"], "<hidden>")
 
     def test_conversion_error_from_schematics(self):
-
         with self.assertRaises(ConversionError) as ctx:
             Root({"inner": {"bool": ""}})
 

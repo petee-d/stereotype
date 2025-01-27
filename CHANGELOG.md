@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.5.4
+Small fixes:
+* Fixed `SchematicsModelField` conversion error handling
+
+(v1.5.3 was improperly tagged and contains an early version of the above change)
+
 ## v1.5.2
 Small fixes:
 * Fixed `SchematicsModelField` mapping of list item errors (index wasn't forced to string)
